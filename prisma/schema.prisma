@@ -1,0 +1,448 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  SHAREHOLDER
+  FAMILY_MEMBER
+  GUEST
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum BookingSource {
+  INTERNAL
+  EXTERNAL_PUBLIC
+  AIRBNB
+  BOOKING_COM
+  MANUAL_IMPORT
+}
+
+enum BookingScope {
+  WHOLE_HOUSE
+  ROOM_SPECIFIC
+}
+
+enum GuestType {
+  MEMBER
+  DEPENDENT_WITH_MEMBER
+  DEPENDENT_WITHOUT_MEMBER
+  GUEST_OF_MEMBER
+  GUEST_OF_DEPENDENT
+  MERE_FAMILY
+  VISITOR_ADULT
+  VISITOR_CHILD_UNDER_6
+}
+
+enum PaymentMethod {
+  MANUAL_PROOF
+  EFT
+  YOCO
+  OZOW
+  STRIPE
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  REFUNDED
+}
+
+enum ExpenseCategory {
+  RATES
+  WATER
+  ELECTRICITY
+  INSURANCE
+  MAINTENANCE
+  GENERAL_MAINTENANCE
+  CONSUMABLES
+  OTHER
+}
+
+enum MaintenanceStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum FeedbackVisibility {
+  PUBLIC
+  INTERNAL
+}
+
+enum IntegrationProvider {
+  AIRBNB
+  BOOKING_COM
+}
+
+enum IntegrationStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+}
+
+enum ReminderFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+}
+
+enum AssetStatus {
+  ACTIVE
+  OUT_OF_SERVICE
+  RETIRED
+}
+
+model User {
+  id                   String             @id @default(cuid())
+  email                String             @unique
+  name                 String
+  role                 UserRole
+  isActive             Boolean            @default(true)
+  invitedById          String?
+  invitedBy            User?              @relation("UserInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+  invitedUsers         User[]             @relation("UserInviter")
+  shareholderProfile   ShareholderProfile?
+  subscription         Subscription?
+  bookings             Booking[]          @relation("BookingsRequested")
+  approvals            Booking[]          @relation("BookingsApproved")
+  invitationsSent      Invitation[]       @relation("Inviter")
+  bookingGuests        BookingGuest[]
+  expensesCreated      Expense[]          @relation("ExpenseCreator")
+  paymentsMade         Payment[]          @relation("PaymentPayer")
+  paymentsVerified     Payment[]          @relation("PaymentVerifier")
+  maintenanceAssigned  MaintenanceTask[]  @relation("MaintenanceAssigned")
+  maintenanceCreated   MaintenanceTask[]  @relation("MaintenanceCreated")
+  feedbackEntries      Feedback[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+model ShareholderProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyBranch   String?
+  councilSeat    Int?
+  votingEnabled  Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Invitation {
+  id            String    @id @default(cuid())
+  email         String
+  role          UserRole
+  token         String    @unique
+  invitedById   String
+  invitedBy     User      @relation("Inviter", fields: [invitedById], references: [id], onDelete: Cascade)
+  expiresAt     DateTime
+  acceptedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([email, role])
+}
+
+model Room {
+  id           String                  @id @default(cuid())
+  name         String
+  code         String                  @unique
+  capacity     Int
+  isBookable   Boolean                 @default(true)
+  notes        String?
+  allocations  BookingRoomAllocation[]
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+}
+
+model Booking {
+  id                String                  @id @default(cuid())
+  source            BookingSource           @default(INTERNAL)
+  scope             BookingScope            @default(WHOLE_HOUSE)
+  status            BookingStatus           @default(PENDING)
+  startDate         DateTime
+  endDate           DateTime
+  nights            Int
+  totalGuests       Int
+  notes             String?
+  requestedById     String?
+  requestedBy       User?                   @relation("BookingsRequested", fields: [requestedById], references: [id], onDelete: SetNull)
+  approvedById      String?
+  approvedBy        User?                   @relation("BookingsApproved", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt        DateTime?
+  rejectionReason   String?
+  externalLeadName  String?
+  externalLeadEmail String?
+  externalLeadPhone String?
+  externalReference String?
+  feeSnapshot       Json?
+  totalAmount       Decimal?                @db.Decimal(10, 2)
+  currency          String                  @default("ZAR")
+  guests            BookingGuest[]
+  roomAllocations   BookingRoomAllocation[]
+  payments          Payment[]
+  feedbackEntries   Feedback[]
+  externalEvents    ExternalCalendarEvent[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@index([status, startDate])
+  @@index([source, startDate])
+}
+
+model BookingGuest {
+  id                String    @id @default(cuid())
+  bookingId         String
+  booking           Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId            String?
+  user              User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  fullName          String
+  age               Int?
+  guestType         GuestType
+  nights            Int?
+  isPrimaryContact  Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+
+  @@index([bookingId])
+  @@index([guestType])
+}
+
+model BookingRoomAllocation {
+  id         String    @id @default(cuid())
+  bookingId  String
+  booking    Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  roomId     String
+  room       Room      @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  guestLabel String?
+  guestCount Int       @default(1)
+  createdAt  DateTime  @default(now())
+
+  @@index([bookingId, roomId])
+}
+
+model FeeConfig {
+  id                              String       @id @default(cuid())
+  isActive                        Boolean      @default(true)
+  monthlyMemberSubscription       Decimal      @default(100) @db.Decimal(10, 2)
+  memberNightRate                 Decimal      @default(50) @db.Decimal(10, 2)
+  dependentWithMemberNightRate    Decimal      @default(25) @db.Decimal(10, 2)
+  dependentWithoutMemberNightRate Decimal      @default(50) @db.Decimal(10, 2)
+  guestOfMemberNightRate          Decimal      @default(50) @db.Decimal(10, 2)
+  guestOfDependentNightRate       Decimal      @default(25) @db.Decimal(10, 2)
+  mereFamilyNightRate             Decimal      @default(200) @db.Decimal(10, 2)
+  externalAdultNightRate          Decimal      @default(400) @db.Decimal(10, 2)
+  externalChildNightRate          Decimal      @default(200) @db.Decimal(10, 2)
+  externalWholeHouseMinRate       Decimal?     @db.Decimal(10, 2)
+  overdueReminderEnabled          Boolean      @default(true)
+  currency                        String       @default("ZAR")
+  effectiveFrom                   DateTime     @default(now())
+  effectiveTo                     DateTime?
+  seasonalRates                   SeasonalRate[]
+  createdAt                       DateTime     @default(now())
+  updatedAt                       DateTime     @updatedAt
+}
+
+model SeasonalRate {
+  id                    String    @id @default(cuid())
+  feeConfigId           String
+  feeConfig             FeeConfig @relation(fields: [feeConfigId], references: [id], onDelete: Cascade)
+  name                  String
+  startMonth            Int
+  startDay              Int
+  endMonth              Int
+  endDay                Int
+  priority              Int       @default(0)
+  externalAdultNightRate Decimal  @db.Decimal(10, 2)
+  externalChildNightRate Decimal  @db.Decimal(10, 2)
+  enabled               Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Subscription {
+  id                 String              @id @default(cuid())
+  userId             String              @unique
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monthlyAmount      Decimal             @db.Decimal(10, 2)
+  arrearsAmount      Decimal             @default(0) @db.Decimal(10, 2)
+  reminderEnabled    Boolean             @default(true)
+  reminderFrequency  ReminderFrequency   @default(MONTHLY)
+  lastPaymentDate    DateTime?
+  nextDueDate        DateTime?
+  notes              String?
+  payments           SubscriptionPayment[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model Payment {
+  id                 String                @id @default(cuid())
+  bookingId          String?
+  booking            Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  payerId            String?
+  payer              User?                 @relation("PaymentPayer", fields: [payerId], references: [id], onDelete: SetNull)
+  amount             Decimal               @db.Decimal(10, 2)
+  currency           String                @default("ZAR")
+  method             PaymentMethod
+  status             PaymentStatus         @default(PENDING)
+  reference          String?
+  periodStart        DateTime?
+  periodEnd          DateTime?
+  monthsCovered      Int?
+  proofFileUrl       String?
+  gatewayProvider    String?
+  gatewayPayload     Json?
+  paidAt             DateTime?
+  verifiedById       String?
+  verifiedBy         User?                 @relation("PaymentVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedAt         DateTime?
+  subscriptionLinks  SubscriptionPayment[]
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  @@index([status, method])
+}
+
+model SubscriptionPayment {
+  id            String       @id @default(cuid())
+  subscriptionId String
+  subscription  Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  paymentId     String
+  payment       Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  periodStart   DateTime
+  periodEnd     DateTime
+  monthsCovered Int
+  createdAt     DateTime     @default(now())
+
+  @@unique([subscriptionId, paymentId])
+}
+
+model Expense {
+  id            String         @id @default(cuid())
+  category      ExpenseCategory
+  title         String
+  description   String?
+  supplier      String?
+  invoiceNumber String?
+  amount        Decimal        @db.Decimal(10, 2)
+  currency      String         @default("ZAR")
+  serviceDate   DateTime?
+  dueDate       DateTime?
+  paidDate      DateTime?
+  invoiceFileUrl String?
+  ocrData       Json?
+  createdById   String?
+  createdBy     User?          @relation("ExpenseCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([category, serviceDate])
+}
+
+model Asset {
+  id              String            @id @default(cuid())
+  name            String
+  category        String
+  serialNumber    String?
+  location        String?
+  status          AssetStatus       @default(ACTIVE)
+  purchaseDate    DateTime?
+  warrantyExpiry  DateTime?
+  notes           String?
+  maintenanceTasks MaintenanceTask[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model MaintenanceTask {
+  id             String              @id @default(cuid())
+  assetId        String?
+  asset          Asset?              @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  title          String
+  description    String?
+  status         MaintenanceStatus   @default(OPEN)
+  priority       MaintenancePriority @default(MEDIUM)
+  estimatedCost  Decimal?            @db.Decimal(10, 2)
+  actualCost     Decimal?            @db.Decimal(10, 2)
+  dueDate        DateTime?
+  completedAt    DateTime?
+  recurrenceRule String?
+  invoiceFileUrl String?
+  assignedToId   String?
+  assignedTo     User?               @relation("MaintenanceAssigned", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdById    String?
+  createdBy      User?               @relation("MaintenanceCreated", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([status, dueDate])
+}
+
+model Feedback {
+  id          String             @id @default(cuid())
+  bookingId   String?
+  booking     Booking?           @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  userId      String?
+  user        User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name        String?
+  email       String?
+  rating      Int?
+  message     String
+  visibility  FeedbackVisibility @default(PUBLIC)
+  isPublished Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+
+  @@index([visibility, createdAt])
+}
+
+model ChannelConnection {
+  id             String            @id @default(cuid())
+  provider       IntegrationProvider
+  status         IntegrationStatus @default(DISCONNECTED)
+  accountLabel   String?
+  settings       Json?
+  lastSyncAt     DateTime?
+  lastSyncStatus String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([provider, status])
+}
+
+model ExternalCalendarEvent {
+  id         String              @id @default(cuid())
+  provider   IntegrationProvider
+  externalId String
+  startDate  DateTime
+  endDate    DateTime
+  guestName  String?
+  payload    Json?
+  bookingId  String?
+  booking    Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  importedAt DateTime            @default(now())
+
+  @@unique([provider, externalId])
+  @@index([startDate, endDate])
+}
