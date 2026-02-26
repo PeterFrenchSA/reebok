@@ -23,8 +23,7 @@ APP_DIR="${APP_DIR_DEFAULT}"
 print_help() {
   cat <<USAGE
 Usage:
-  sudo bash scripts/install-ubuntu-24.04.sh [option:q!
-s]
+  sudo bash scripts/install-ubuntu-24.04.sh [options]
 
 Options:
   --app-dir <path>           App directory (default: ${APP_DIR_DEFAULT})

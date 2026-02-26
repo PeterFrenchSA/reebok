@@ -115,6 +115,27 @@ How it works:
 - Updates primary app and restarts systemd service on port `3000`
 - Switches traffic back and removes temporary instance
 
+## Cleanup and Reinstall (Ubuntu 24.04)
+
+If installation got into a bad state, run cleanup:
+
+```bash
+cd /path/to/reebok-house-manager
+sudo bash scripts/cleanup-ubuntu-24.04.sh --yes
+```
+
+If you also want to remove the full app directory:
+
+```bash
+sudo bash scripts/cleanup-ubuntu-24.04.sh --remove-app-dir --yes
+```
+
+Then reinstall:
+
+```bash
+sudo bash scripts/install-ubuntu-24.04.sh --skip-tls
+```
+
 ## Key API Endpoints
 
 - `POST /api/bookings`
