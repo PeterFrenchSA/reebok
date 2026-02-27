@@ -27,6 +27,7 @@ type Booking = {
   endDate: string;
   nights: number;
   totalGuests: number;
+  petCount?: number | null;
   currency: string;
   totalAmount: string | number | null;
   notes?: string | null;
@@ -235,6 +236,7 @@ export function ActiveBookingsPanel({
               <p className="lead">
                 Guests: {booking.totalGuests} | {moneyLabel(booking.currency, booking.totalAmount)} | {booking.source}
               </p>
+              <p className="lead">Pets: {booking.petCount ?? 0}</p>
               <p className="lead">
                 Requester: {requester} ({requestEmail})
               </p>

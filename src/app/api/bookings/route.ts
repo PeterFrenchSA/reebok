@@ -56,6 +56,7 @@ const createBookingSchema = z.object({
   scope: z.nativeEnum(BookingScope).optional(),
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
+  petCount: z.number().int().nonnegative().max(20).default(0),
   notes: z.string().max(2000).optional(),
   externalLeadName: z.string().max(120).optional(),
   externalLeadEmail: z.string().email().optional(),
@@ -250,6 +251,7 @@ export async function POST(req: NextRequest) {
         endDate,
         nights,
         totalGuests,
+        petCount: payload.petCount,
         notes: payload.notes,
         requestedById: user?.id,
         externalLeadName: payload.externalLeadName,
@@ -318,6 +320,7 @@ export async function POST(req: NextRequest) {
           `Source: ${booking.source}`,
           `Scope: ${booking.scope}`,
           `Guests: ${booking.totalGuests}`,
+          `Pets: ${booking.petCount}`,
           `Estimated amount: ${booking.currency} ${booking.totalAmount ?? 0}`
         ].join("\n")
       });

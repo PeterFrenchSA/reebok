@@ -1,6 +1,7 @@
 import { ActiveBookingsPanel } from "@/components/ActiveBookingsPanel";
 import { AdminBookingApprovals } from "@/components/AdminBookingApprovals";
 import { AdminBookingHistory } from "@/components/AdminBookingHistory";
+import { AdminBookingPolicySettings } from "@/components/AdminBookingPolicySettings";
 
 export default function AdminBookingsPage() {
   return (
@@ -10,6 +11,8 @@ export default function AdminBookingsPage() {
         <h1>Booking Management</h1>
         <p className="lead">Review active requests, approvals, and full booking audit history.</p>
       </article>
+
+      <AdminBookingPolicySettings />
 
       <article className="grid">
         <h2>Active Bookings</h2>

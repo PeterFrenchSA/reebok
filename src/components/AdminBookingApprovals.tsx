@@ -16,6 +16,7 @@ type Booking = {
   endDate: string;
   nights: number;
   totalGuests: number;
+  petCount?: number | null;
   currency: string;
   totalAmount: string | number | null;
   notes?: string | null;
@@ -167,6 +168,7 @@ export function AdminBookingApprovals() {
               <p className="lead">
                 Guests: {booking.totalGuests} | Estimate: {formatMoney(booking.currency, booking.totalAmount)}
               </p>
+              <p className="lead">Pets: {booking.petCount ?? 0}</p>
               <p className="lead">
                 Requester: {requester} ({requesterEmail})
               </p>

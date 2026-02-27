@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { DEFAULT_PET_NOTICE } from "@/lib/booking-policy";
 
 type SubmissionState = {
   type: "idle" | "success" | "error";
@@ -20,7 +21,25 @@ export function BookingRequestPage() {
   const [leadPhone, setLeadPhone] = useState("");
   const [adults, setAdults] = useState(2);
   const [childrenUnder6, setChildrenUnder6] = useState(0);
+  const [petCount, setPetCount] = useState(0);
   const [notes, setNotes] = useState("");
+  const [petNotice, setPetNotice] = useState(DEFAULT_PET_NOTICE);
+
+  useEffect(() => {
+    async function loadPolicy() {
+      try {
+        const response = await fetch("/api/bookings/policy", { cache: "no-store" });
+        const data = (await response.json()) as { policy?: { petNotice?: string } };
+        if (response.ok && typeof data.policy?.petNotice === "string" && data.policy.petNotice.trim().length > 0) {
+          setPetNotice(data.policy.petNotice);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    void loadPolicy();
+  }, []);
 
   const nights = useMemo(() => {
     if (!startDate || !endDate) {
@@ -49,6 +68,7 @@ export function BookingRequestPage() {
           externalLeadName: leadName,
           externalLeadEmail: leadEmail,
           externalLeadPhone: leadPhone,
+          petCount: Number(petCount),
           notes,
           guestBreakdown: {
             member: 0,
@@ -133,6 +153,17 @@ export function BookingRequestPage() {
                 onChange={(e) => setChildrenUnder6(Number(e.target.value))}
               />
             </div>
+            <div className="field">
+              <label htmlFor="pets">Pets</label>
+              <input
+                id="pets"
+                type="number"
+                min={0}
+                max={20}
+                value={petCount}
+                onChange={(e) => setPetCount(Number(e.target.value))}
+              />
+            </div>
           </div>
 
           <div className="field">
@@ -179,10 +210,21 @@ export function BookingRequestPage() {
             <strong>{adults + childrenUnder6}</strong>
             <span>Total Guests</span>
           </div>
+          <div className="metric">
+            <strong>{petCount}</strong>
+            <span>Pet{petCount === 1 ? "" : "s"}</span>
+          </div>
           <p className="lead">
             Seasonal rates are automatically applied for external visitors when configured by admin.
           </p>
         </article>
+
+        {petCount > 0 ? (
+          <article className="notice" role="note" aria-live="polite">
+            <strong>Pet Notice</strong>
+            <p>{petNotice}</p>
+          </article>
+        ) : null}
 
         <article className="card grid">
           <h2>Member and Admin</h2>

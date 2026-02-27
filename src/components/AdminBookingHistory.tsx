@@ -20,6 +20,7 @@ type Booking = {
   endDate: string;
   nights: number;
   totalGuests: number;
+  petCount?: number | null;
   currency: string;
   totalAmount: string | number | null;
   rejectionReason?: string | null;
@@ -135,6 +136,7 @@ export function AdminBookingHistory() {
             <p className="lead">
               {booking.source} / {booking.scope} | Guests: {booking.totalGuests} | {amountLabel(booking.currency, booking.totalAmount)}
             </p>
+            <p className="lead">Pets: {booking.petCount ?? 0}</p>
             <p className="lead">Requested by: {booking.requestedBy?.name ?? "External"} ({booking.requestedBy?.email ?? "No email"})</p>
             <p className="lead">Reviewed by: {booking.approvedBy?.name ?? "Not reviewed"}</p>
             {booking.rejectionReason ? <p className="notice error">Rejection reason: {booking.rejectionReason}</p> : null}

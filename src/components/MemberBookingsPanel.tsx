@@ -8,6 +8,7 @@ type Booking = {
   startDate: string;
   endDate: string;
   totalGuests: number;
+  petCount?: number | null;
   currency: string;
   totalAmount: string | number | null;
 };
@@ -85,6 +86,7 @@ export function MemberBookingsPanel() {
           <p className="lead">
             Guests: {booking.totalGuests} | Amount: {formatMoney(booking.currency, booking.totalAmount)}
           </p>
+          <p className="lead">Pets: {booking.petCount ?? 0}</p>
           <p className="lead">Reference: {booking.id}</p>
         </article>
       ))}

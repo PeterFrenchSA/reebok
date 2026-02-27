@@ -216,6 +216,7 @@ model Booking {
   endDate           DateTime
   nights            Int
   totalGuests       Int
+  petCount          Int                     @default(0)
   notes             String?
   requestedById     String?
   requestedBy       User?                   @relation("BookingsRequested", fields: [requestedById], references: [id], onDelete: SetNull)
@@ -241,6 +242,13 @@ model Booking {
 
   @@index([status, startDate])
   @@index([source, startDate])
+}
+
+model BookingPolicy {
+  id        String   @id @default("default")
+  petNotice String   @default("Please note that while the property is pet friendly, the furniture and bedrooms are not.")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model BookingAuditLog {
