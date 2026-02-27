@@ -121,6 +121,7 @@ model User {
   name                 String
   role                 UserRole
   isActive             Boolean            @default(true)
+  passwordHash         String?
   invitedById          String?
   invitedBy            User?              @relation("UserInviter", fields: [invitedById], references: [id], onDelete: SetNull)
   invitedUsers         User[]             @relation("UserInviter")

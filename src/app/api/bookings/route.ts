@@ -167,10 +167,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (source === BookingSource.EXTERNAL_PUBLIC && user && !hasPermission(user.role, "booking:create:external")) {
-      return NextResponse.json({ error: "Role cannot create external bookings" }, { status: 403 });
-    }
-
     const startDate = payload.startDate;
     const endDate = payload.endDate;
     const nights = calculateNights(startDate, endDate);

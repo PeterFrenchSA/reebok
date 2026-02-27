@@ -98,6 +98,32 @@ a {
   background: #fff;
 }
 
+.nav-link-strong {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.nav-link-strong:hover {
+  background: #0b5f4b;
+  border-color: #0b5f4b;
+}
+
+.session-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.session-pill {
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .content-shell {
   width: min(1120px, 100%);
   margin: 0 auto;
@@ -214,9 +240,27 @@ button {
   color: #fff;
 }
 
+.btn-secondary {
+  background: #e7ebe6;
+  color: #1f2b23;
+  border: 1px solid #ccd2c8;
+}
+
 .btn-primary:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.inline-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 .inline {
@@ -258,5 +302,10 @@ button {
 
   .shell-nav {
     width: 100%;
+  }
+
+  .session-controls {
+    width: 100%;
+    justify-content: space-between;
   }
 }

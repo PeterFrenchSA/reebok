@@ -12,6 +12,7 @@ DB_NAME="reebok_house"
 DB_USER="reebok_app"
 DB_PASSWORD=""
 DB_PASSWORD_URL_ENC=""
+SESSION_SECRET=""
 APP_USER="${SUDO_USER:-$USER}"
 SKIP_TLS="false"
 SKIP_SEED="false"
@@ -127,6 +128,10 @@ validate_identifier "${DB_USER}" "db-user"
 
 if [[ -z "${DB_PASSWORD}" ]]; then
   DB_PASSWORD="$(openssl rand -base64 33 | tr -d '\n' | tr '/+' 'Aa' | cut -c1-32)"
+fi
+
+if [[ -z "${SESSION_SECRET}" ]]; then
+  SESSION_SECRET="$(openssl rand -hex 32)"
 fi
 
 urlencode() {
@@ -257,6 +262,12 @@ write_env_file() {
   upsert_env "${env_file}" "PORT" "${APP_PORT}"
   upsert_env "${env_file}" "APP_BASE_URL" "${base_url}"
 
+  local existing_session_secret
+  existing_session_secret="$(${SUDO} sed -n -E 's/^SESSION_SECRET="?([^"]*)"?$/\1/p' "${env_file}" | tail -n 1)"
+  if [[ -z "${existing_session_secret}" || "${existing_session_secret}" == "change-this-to-a-long-random-string" ]]; then
+    upsert_env "${env_file}" "SESSION_SECRET" "${SESSION_SECRET}"
+  fi
+
   ${SUDO} chown "${APP_USER}:${APP_USER}" "${env_file}"
 }
 
@@ -298,14 +309,8 @@ run_prisma_and_build() {
   fi
 
   if [[ "${SKIP_SEED}" != "true" ]]; then
-    local fee_count
-    fee_count="$(run_as_user postgres psql -d "${DB_NAME}" -tAc 'SELECT COUNT(*) FROM "FeeConfig";' 2>/dev/null || echo 0)"
-    if [[ "${fee_count}" == "0" ]]; then
-      log "Seeding baseline data"
-      run_as_user "${APP_USER}" bash -lc "set -a; source \"${APP_DIR}/.env.production\"; set +a; cd \"${APP_DIR}\"; npm run prisma:seed"
-    else
-      log "Skipping seed (FeeConfig already has data)"
-    fi
+    log "Seeding baseline data and sample users"
+    run_as_user "${APP_USER}" bash -lc "set -a; source \"${APP_DIR}/.env.production\"; set +a; cd \"${APP_DIR}\"; npm run prisma:seed"
   fi
 
   run_as_user "${APP_USER}" bash -lc "set -a; source \"${APP_DIR}/.env.production\"; set +a; cd \"${APP_DIR}\"; npm run build"

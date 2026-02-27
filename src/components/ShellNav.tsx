@@ -1,13 +1,23 @@
 import Link from "next/link";
 import type { Route } from "next";
+import { getSessionUserFromCookies } from "@/lib/auth";
+import { hasPermission } from "@/lib/rbac";
+import { LogoutButton } from "@/components/LogoutButton";
 
-const links: Array<{ href: Route; label: string }> = [
-  { href: "/", label: "Home" },
-  { href: "/public-booking", label: "Public Booking" },
-  { href: "/dashboard", label: "Dashboard" }
-];
+const baseLinks: Array<{ href: Route; label: string }> = [{ href: "/", label: "Book Stay" }];
 
-export function ShellNav() {
+export async function ShellNav() {
+  const user = await getSessionUserFromCookies();
+  const links = [...baseLinks];
+
+  if (user) {
+    links.push({ href: "/member", label: "Member" });
+  }
+
+  if (user && hasPermission(user.role, "booking:manage")) {
+    links.push({ href: "/admin", label: "Admin" });
+  }
+
   return (
     <header className="shell-header">
       <div className="shell-brand">
@@ -23,6 +33,16 @@ export function ShellNav() {
             {item.label}
           </Link>
         ))}
+        {user ? (
+          <div className="session-controls">
+            <span className="session-pill">{user.email ?? user.role}</span>
+            <LogoutButton />
+          </div>
+        ) : (
+          <Link href="/login" className="nav-link nav-link-strong">
+            Sign In
+          </Link>
+        )}
       </nav>
     </header>
   );

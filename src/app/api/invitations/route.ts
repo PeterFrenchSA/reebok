@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const existingUser = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+  const inviteEmail = parsed.data.email.toLowerCase();
+  const existingUser = await prisma.user.findUnique({ where: { email: inviteEmail } });
   if (existingUser) {
     return NextResponse.json({ error: "User already exists" }, { status: 409 });
   }
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
 
   const invitation = await prisma.invitation.create({
     data: {
-      email: parsed.data.email,
+      email: inviteEmail,
       role: parsed.data.role,
       token,
       invitedById: user.id,

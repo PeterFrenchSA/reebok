@@ -14,6 +14,7 @@ GIT_REMOTE="origin"
 GIT_BRANCH=""
 SKIP_MIGRATE="false"
 SKIP_BUILD="false"
+SKIP_SEED="false"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR_DEFAULT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
@@ -43,6 +44,7 @@ Options:
   --git-remote <name>        Git remote (default: ${GIT_REMOTE})
   --git-branch <name>        Git branch (default: current branch)
   --skip-migrate             Skip Prisma migration step
+  --skip-seed                Skip Prisma seed step
   --skip-build               Skip npm build step
   -h, --help                 Show this help
 
@@ -96,6 +98,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-migrate)
       SKIP_MIGRATE="true"
+      shift
+      ;;
+    --skip-seed)
+      SKIP_SEED="true"
       shift
       ;;
     --skip-build)
@@ -275,6 +281,11 @@ build_stage_release() {
     else
       run_as_user "${APP_USER}" bash -lc "set -a; source \"${STAGE_DIR}/.env.production\"; set +a; cd \"${STAGE_DIR}\"; npx prisma db push"
     fi
+  fi
+
+  if [[ "${SKIP_SEED}" != "true" ]]; then
+    log "Running seed in staged release"
+    run_as_user "${APP_USER}" bash -lc "set -a; source \"${STAGE_DIR}/.env.production\"; set +a; cd \"${STAGE_DIR}\"; npm run prisma:seed"
   fi
 
   if [[ "${SKIP_BUILD}" != "true" ]]; then

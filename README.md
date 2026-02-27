@@ -39,8 +39,10 @@ Next.js + PostgreSQL starter platform for managing Sandeney Pty Ltd's family bea
 - `prisma/schema.prisma`: database model
 - `src/app/api/*`: API endpoints
 - `src/lib/*`: auth, RBAC, fees, mail, import/export, OCR
-- `src/app/public-booking`: external booking UI
-- `src/app/dashboard`: admin/family scaffold
+- `src/app/page.tsx`: booking landing page
+- `src/app/admin`: admin section
+- `src/app/member`: member section
+- `src/app/login`: credential sign-in page
 
 ## Setup
 
@@ -53,7 +55,7 @@ Next.js + PostgreSQL starter platform for managing Sandeney Pty Ltd's family bea
    ```bash
    cp .env.example .env
    ```
-4. Set `DATABASE_URL` to your PostgreSQL instance.
+4. Set `DATABASE_URL` and `SESSION_SECRET` in `.env`.
 5. Generate Prisma client and migrate:
    ```bash
    npm run prisma:generate
@@ -67,6 +69,11 @@ Next.js + PostgreSQL starter platform for managing Sandeney Pty Ltd's family bea
    ```bash
    npm run dev
    ```
+
+Sample seeded accounts (after `npm run prisma:seed`):
+
+- Admin: `admin@sandeney.co.za` / `admin1234`
+- Member: `member@sandeney.co.za` / `member1234`
 
 ## Ubuntu 24.04 VPS Deploy
 
@@ -107,6 +114,12 @@ With git pull:
 sudo bash scripts/update-ubuntu.sh --git-pull --git-branch main
 ```
 
+Skip seed if needed:
+
+```bash
+sudo bash scripts/update-ubuntu.sh --git-pull --git-branch main --skip-seed
+```
+
 How it works:
 
 - Builds a staged release in `/tmp`
@@ -144,6 +157,9 @@ sudo bash scripts/install-ubuntu-24.04.sh --skip-tls
 - `GET|POST /api/rooms`
 - `GET|POST /api/invitations`
 - `POST /api/invitations/accept`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET|PATCH /api/users` (admin user management)
 - `GET|POST /api/payments`
 - `GET|POST|PATCH /api/subscriptions`
 - `POST /api/fees/calculate`
@@ -160,8 +176,9 @@ sudo bash scripts/install-ubuntu-24.04.sh --skip-tls
 
 ## Authentication Note
 
-This iteration includes a lightweight header-based session stub (`x-user-id`, `x-user-role`) for local integration testing.
-For production, replace it with proper invite-token acceptance + secure auth (NextAuth/Auth.js or equivalent).
+This iteration now includes simple credential login with an HTTP-only cookie session (`/api/auth/login`).
+Header-based fallback (`x-user-id`, `x-user-role`) still works for integration testing, but production should
+move to full invitation acceptance and hardened auth/session flows.
 
 ## Payment Gateway Note
 

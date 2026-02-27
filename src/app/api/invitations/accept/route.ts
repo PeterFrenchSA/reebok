@@ -30,7 +30,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invitation has expired" }, { status: 410 });
   }
 
-  const existingUser = await prisma.user.findUnique({ where: { email: invitation.email } });
+  const inviteEmail = invitation.email.toLowerCase();
+  const existingUser = await prisma.user.findUnique({ where: { email: inviteEmail } });
   if (existingUser) {
     await prisma.invitation.update({
       where: { id: invitation.id },
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
 
   const user = await prisma.user.create({
     data: {
-      email: invitation.email,
+      email: inviteEmail,
       name: parsed.data.name,
       role: invitation.role,
       invitedById: invitation.invitedById
