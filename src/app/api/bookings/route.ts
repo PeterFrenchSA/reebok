@@ -161,7 +161,13 @@ export async function GET(req: NextRequest) {
     take: take > 0 && take <= 1000 ? take : 200
   });
 
-  return NextResponse.json({ bookings });
+  const sanitizedBookings = bookings.map((booking) => {
+    const item = { ...booking } as typeof booking & { manageToken?: string | null };
+    delete item.manageToken;
+    return item;
+  });
+
+  return NextResponse.json({ bookings: sanitizedBookings });
 }
 
 export async function POST(req: NextRequest) {
@@ -352,8 +358,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const sanitizedBooking = { ...booking } as typeof booking & { manageToken?: string | null };
+    delete sanitizedBooking.manageToken;
+
     return NextResponse.json({
-      booking,
+      booking: sanitizedBooking,
       status: "PENDING_APPROVAL",
       feeBreakdown
     });

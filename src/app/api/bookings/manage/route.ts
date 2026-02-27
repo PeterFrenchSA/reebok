@@ -1,4 +1,4 @@
-import { BookingAuditAction, BookingStatus, Prisma, UserRole } from "@prisma/client";
+import { BookingAuditAction, BookingSource, BookingStatus, Prisma, UserRole } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
@@ -162,7 +162,7 @@ export async function PATCH(req: NextRequest) {
     let feeSnapshot: Prisma.InputJsonValue | undefined =
       existing.feeSnapshot === null ? undefined : (existing.feeSnapshot as Prisma.InputJsonValue);
 
-    if (existing.source === "EXTERNAL_PUBLIC") {
+    if (existing.source === BookingSource.EXTERNAL_PUBLIC) {
       const feeConfig =
         (await tx.feeConfig.findFirst({
           where: {
@@ -278,8 +278,11 @@ export async function PATCH(req: NextRequest) {
     await sendMail({ to: approverEmails, subject: template.subject, text: template.text });
   }
 
+  const sanitizedBooking = { ...updated } as typeof updated & { manageToken?: string | null };
+  delete sanitizedBooking.manageToken;
+
   return NextResponse.json({
-    booking: updated,
+    booking: sanitizedBooking,
     message: requiresReapproval
       ? "Booking updated and moved back to pending approval."
       : "Booking updated and still pending approval."

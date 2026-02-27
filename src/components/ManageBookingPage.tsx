@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type Booking = {
   id: string;
@@ -63,6 +63,15 @@ export function ManageBookingPage({ initialReference = "", initialToken = "", in
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [state, setState] = useState<UiState>({ type: "idle" });
+
+  useEffect(() => {
+    if (!initialReference) {
+      return;
+    }
+    void loadBooking();
+    // Intentionally load once from the initial query context.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function loadBooking(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
