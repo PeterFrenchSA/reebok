@@ -127,6 +127,7 @@ export async function GET(req: NextRequest) {
     where,
     orderBy: { startDate: "desc" },
     include: {
+      requestedBy: { select: { name: true, email: true } },
       guests: true,
       roomAllocations: {
         include: { room: true }
@@ -262,6 +263,7 @@ export async function POST(req: NextRequest) {
             : undefined
       },
       include: {
+        requestedBy: { select: { name: true, email: true } },
         guests: true,
         roomAllocations: { include: { room: true } }
       }

@@ -10,6 +10,7 @@ Next.js + PostgreSQL starter platform for managing Sandeney Pty Ltd's family bea
   - `FAMILY_MEMBER` (booking only)
   - `GUEST` (public booking only)
 - Mandatory approval flow for all bookings
+- Admin booking approvals panel in `/admin`
 - External bookings constrained to whole-house reservations
 - Family bookings support whole-house or optional room allocations
 - Fee engine reflecting your proposal defaults:
@@ -17,6 +18,7 @@ Next.js + PostgreSQL starter platform for managing Sandeney Pty Ltd's family bea
   - Member/dependent/guest/mere-family/external rate tiers
   - Seasonal rate overrides for external visitors
 - Arrears tracking with reminder capability (no suspension)
+- Admin/member fee tracking panels (`/admin` and `/member`)
 - Payment records with manual proof support and multi-month coverage
 - Gateway-ready payment fields (Yoco, Ozow, extensible)
 - Expense and finance records import/export (CSV/XLSX)

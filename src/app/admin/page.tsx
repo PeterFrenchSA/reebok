@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { AdminBookingApprovals } from "@/components/AdminBookingApprovals";
+import { AdminFeeTracker } from "@/components/AdminFeeTracker";
 import { AdminUserManager } from "@/components/AdminUserManager";
 import { getSessionUserFromCookies } from "@/lib/auth";
 import { SAMPLE_ADMIN, SAMPLE_MEMBER } from "@/lib/default-users";
@@ -39,8 +41,32 @@ export default async function AdminPage() {
       </article>
 
       <article className="grid">
+        <h2>Booking Approvals</h2>
+        <AdminBookingApprovals />
+      </article>
+
+      <article className="grid">
+        <h2>Member Fee Tracking</h2>
+        <AdminFeeTracker />
+      </article>
+
+      <article className="grid">
         <h2>User Management</h2>
         <AdminUserManager />
+      </article>
+
+      <article className="card grid">
+        <h2>Modules Still API-Only</h2>
+        <p className="lead">
+          These capabilities are available in backend endpoints, but still need dedicated screens:
+        </p>
+        <ul className="list">
+          <li>Rooms management</li>
+          <li>Expenses ledger and import/export</li>
+          <li>Assets and maintenance workflow</li>
+          <li>Feedback moderation</li>
+          <li>Channel sync operations</li>
+        </ul>
       </article>
     </section>
   );

@@ -263,6 +263,12 @@ button {
   text-decoration: none;
 }
 
+.action-row {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
 .inline {
   display: grid;
   gap: 0.8rem;
