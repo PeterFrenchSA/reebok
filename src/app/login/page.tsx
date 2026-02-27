@@ -20,8 +20,8 @@ export default function LoginPage() {
     return isAllowedNextPath(value) ? value : null;
   }, [params]);
 
-  const [email, setEmail] = useState(SAMPLE_MEMBER.email);
-  const [password, setPassword] = useState(SAMPLE_MEMBER.password);
+  const [email, setEmail] = useState<string>(SAMPLE_MEMBER.email);
+  const [password, setPassword] = useState<string>(SAMPLE_MEMBER.password);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [state, setState] = useState<LoginState>({ type: "idle" });
 
