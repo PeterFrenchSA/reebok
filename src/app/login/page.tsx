@@ -1,7 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
 import { SAMPLE_ADMIN, SAMPLE_MEMBER } from "@/lib/default-users";
 
 type LoginState = {
@@ -14,11 +13,12 @@ function isAllowedNextPath(value: string | null): value is "/admin" | "/member" 
 }
 
 export default function LoginPage() {
-  const params = useSearchParams();
-  const nextPath = useMemo(() => {
-    const value = params.get("next");
-    return isAllowedNextPath(value) ? value : null;
-  }, [params]);
+  const [nextPath, setNextPath] = useState<"/admin" | "/member" | null>(null);
+
+  useEffect(() => {
+    const value = new URLSearchParams(window.location.search).get("next");
+    setNextPath(isAllowedNextPath(value) ? value : null);
+  }, []);
 
   const [email, setEmail] = useState<string>(SAMPLE_MEMBER.email);
   const [password, setPassword] = useState<string>(SAMPLE_MEMBER.password);
