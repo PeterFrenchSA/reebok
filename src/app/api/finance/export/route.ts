@@ -68,7 +68,8 @@ export async function GET(req: NextRequest) {
 
   if (format === "xlsx") {
     const buffer = toXlsxBuffer(rows, entity);
-    return new NextResponse(buffer, {
+    const body = Uint8Array.from(buffer).buffer;
+    return new NextResponse(body, {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
