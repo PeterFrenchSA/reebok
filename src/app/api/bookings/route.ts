@@ -2,7 +2,8 @@ import {
   BookingScope,
   BookingSource,
   BookingStatus,
-  GuestType
+  GuestType,
+  Prisma
 } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -239,7 +240,7 @@ export async function POST(req: NextRequest) {
         externalLeadName: payload.externalLeadName,
         externalLeadEmail: payload.externalLeadEmail,
         externalLeadPhone: payload.externalLeadPhone,
-        feeSnapshot: feeBreakdown,
+        feeSnapshot: feeBreakdown as Prisma.InputJsonValue,
         totalAmount: feeBreakdown.total,
         currency: feeBreakdown.currency,
         guests: payload.guests?.length

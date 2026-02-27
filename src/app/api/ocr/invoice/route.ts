@@ -1,4 +1,4 @@
-import { ExpenseCategory } from "@prisma/client";
+import { ExpenseCategory, Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       serviceDate: extraction.invoiceDate ? new Date(extraction.invoiceDate) : undefined,
       dueDate: extraction.dueDate ? new Date(extraction.dueDate) : undefined,
       invoiceFileUrl: parsed.data.imageUrl,
-      ocrData: extraction,
+      ocrData: extraction as Prisma.InputJsonValue,
       createdById: user.id
     }
   });

@@ -1,4 +1,4 @@
-import { ExpenseCategory } from "@prisma/client";
+import { ExpenseCategory, Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
           dueDate: parsed.data.dueDate,
           paidDate: parsed.data.paidDate,
           invoiceFileUrl: parsed.data.invoiceFileUrl,
-          ocrData: parsed.data.ocrData
+          ocrData: parsed.data.ocrData as Prisma.InputJsonValue | undefined
         }
       })
     : await prisma.expense.create({
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
           dueDate: parsed.data.dueDate,
           paidDate: parsed.data.paidDate,
           invoiceFileUrl: parsed.data.invoiceFileUrl,
-          ocrData: parsed.data.ocrData,
+          ocrData: parsed.data.ocrData as Prisma.InputJsonValue | undefined,
           createdById: user.id
         }
       });

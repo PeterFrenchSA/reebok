@@ -1,4 +1,4 @@
-import { PaymentMethod, PaymentStatus } from "@prisma/client";
+import { PaymentMethod, PaymentStatus, Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
         ? buildSubscriptionCoverage(data.periodStart, data.monthsCovered).periodEnd
         : undefined,
       gatewayProvider: data.gatewayProvider,
-      gatewayPayload: data.gatewayPayload
+      gatewayPayload: data.gatewayPayload as Prisma.InputJsonValue | undefined
     }
   });
 
