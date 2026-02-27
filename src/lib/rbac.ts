@@ -11,6 +11,10 @@ export type AppPermission =
   | "maintenance:view"
   | "maintenance:edit"
   | "assets:edit"
+  | "decision:submit"
+  | "decision:create"
+  | "decision:vote"
+  | "decision:review"
   | "feedback:public"
   | "feedback:internal";
 
@@ -26,6 +30,10 @@ const permissionMap: Record<UserRole, Set<AppPermission>> = {
     "maintenance:view",
     "maintenance:edit",
     "assets:edit",
+    "decision:submit",
+    "decision:create",
+    "decision:vote",
+    "decision:review",
     "feedback:public",
     "feedback:internal"
   ]),
@@ -40,10 +48,19 @@ const permissionMap: Record<UserRole, Set<AppPermission>> = {
     "maintenance:view",
     "maintenance:edit",
     "assets:edit",
+    "decision:submit",
+    "decision:create",
+    "decision:vote",
+    "decision:review",
     "feedback:public",
     "feedback:internal"
   ]),
-  FAMILY_MEMBER: new Set<AppPermission>(["booking:create:family", "feedback:public"]),
+  FAMILY_MEMBER: new Set<AppPermission>([
+    "booking:create:family",
+    "decision:submit",
+    "decision:vote",
+    "feedback:public"
+  ]),
   GUEST: new Set<AppPermission>(["booking:create:external", "feedback:public"])
 };
 

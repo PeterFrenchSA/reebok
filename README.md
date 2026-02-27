@@ -19,6 +19,10 @@ Next.js + PostgreSQL starter platform for managing Sandeney Pty Ltd's family bea
   - Seasonal rate overrides for external visitors
 - Arrears tracking with reminder capability (no suspension)
 - Admin/member fee tracking panels (`/admin` and `/member`)
+- Decision voting workflow:
+  - Admin-created polls (`admins only` or `members + admins`)
+  - Member-submitted decisions for admin review/launch
+  - Vote tracking visuals (turnout, yes/no/abstain) by eligible audience
 - Payment records with manual proof support and multi-month coverage
 - Gateway-ready payment fields (Yoco, Ozow, extensible)
 - Expense and finance records import/export (CSV/XLSX)
@@ -172,6 +176,9 @@ sudo bash scripts/install-ubuntu-24.04.sh --skip-tls
 - `GET|POST /api/maintenance/tasks`
 - `GET|POST /api/assets`
 - `GET|POST /api/feedback`
+- `GET|POST /api/decisions`
+- `PATCH /api/decisions/{id}` (launch/close/reject)
+- `POST /api/decisions/{id}/vote`
 - `POST /api/ocr/invoice`
 - `POST /api/jobs/subscription-reminders`
 - `GET|POST /api/channels/sync`

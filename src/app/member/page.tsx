@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { MemberDecisionVoting } from "@/components/MemberDecisionVoting";
 import { MemberFeeTracker } from "@/components/MemberFeeTracker";
 import { MemberBookingsPanel } from "@/components/MemberBookingsPanel";
 import { getSessionUserFromCookies } from "@/lib/auth";
@@ -35,6 +36,11 @@ export default async function MemberPage() {
       <article className="grid">
         <h2>My Fees</h2>
         <MemberFeeTracker />
+      </article>
+
+      <article className="grid">
+        <h2>Decision Voting</h2>
+        <MemberDecisionVoting />
       </article>
     </section>
   );

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AdminBookingApprovals } from "@/components/AdminBookingApprovals";
+import { AdminDecisionVoting } from "@/components/AdminDecisionVoting";
 import { AdminFeeTracker } from "@/components/AdminFeeTracker";
 import { AdminUserManager } from "@/components/AdminUserManager";
 import { getSessionUserFromCookies } from "@/lib/auth";
@@ -48,6 +49,11 @@ export default async function AdminPage() {
       <article className="grid">
         <h2>Member Fee Tracking</h2>
         <AdminFeeTracker />
+      </article>
+
+      <article className="grid">
+        <h2>Decision Voting</h2>
+        <AdminDecisionVoting />
       </article>
 
       <article className="grid">
