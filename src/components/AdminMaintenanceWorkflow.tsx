@@ -538,200 +538,202 @@ export function AdminMaintenanceWorkflow({
       ) : null}
 
       {showMaintenance ? (
-      <article className="card grid">
-        <h3>Log Maintenance Task</h3>
-        <div className="grid grid-2">
-          <div className="field">
-            <label htmlFor="task-asset">Asset</label>
-            <select id="task-asset" value={taskForm.assetId} onChange={(event) => setTaskForm((c) => ({ ...c, assetId: event.target.value }))}>
-              <option value="">No specific asset</option>
-              {assets.map((asset) => (
-                <option key={asset.id} value={asset.id}>
-                  {asset.name} ({asset.category})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="task-title">Title</label>
-            <input id="task-title" value={taskForm.title} onChange={(event) => setTaskForm((c) => ({ ...c, title: event.target.value }))} />
-          </div>
-          <div className="field">
-            <label htmlFor="task-priority">Priority</label>
-            <select id="task-priority" value={taskForm.priority} onChange={(event) => setTaskForm((c) => ({ ...c, priority: event.target.value as MaintenancePriority }))}>
-              <option value="LOW">LOW</option>
-              <option value="MEDIUM">MEDIUM</option>
-              <option value="HIGH">HIGH</option>
-              <option value="URGENT">URGENT</option>
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="task-due">Due Date</label>
-            <input id="task-due" type="date" value={taskForm.dueDate} onChange={(event) => setTaskForm((c) => ({ ...c, dueDate: event.target.value }))} />
-          </div>
-          <div className="field">
-            <label htmlFor="task-estimated">Estimated Cost</label>
-            <input id="task-estimated" type="number" step="0.01" min="0" value={taskForm.estimatedCost} onChange={(event) => setTaskForm((c) => ({ ...c, estimatedCost: event.target.value }))} />
-          </div>
-          <div className="field">
-            <label htmlFor="task-assigned">Assign To</label>
-            <select id="task-assigned" value={taskForm.assignedToId} onChange={(event) => setTaskForm((c) => ({ ...c, assignedToId: event.target.value }))}>
-              <option value="">Unassigned</option>
-              {assignableUsers.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="task-doc-url">Supporting Document URL</label>
-            <input id="task-doc-url" value={taskForm.invoiceFileUrl} onChange={(event) => setTaskForm((c) => ({ ...c, invoiceFileUrl: event.target.value }))} />
-          </div>
-        </div>
-        <div className="field">
-          <label htmlFor="task-description">Description</label>
-          <textarea id="task-description" value={taskForm.description} onChange={(event) => setTaskForm((c) => ({ ...c, description: event.target.value }))} />
-        </div>
-        <button type="button" className="btn-primary" disabled={saving} onClick={() => void createTask()}>
-          {saving ? "Saving..." : "Create Task"}
-        </button>
-      </article>
+        <>
+          <article className="card grid">
+            <h3>Log Maintenance Task</h3>
+            <div className="grid grid-2">
+              <div className="field">
+                <label htmlFor="task-asset">Asset</label>
+                <select id="task-asset" value={taskForm.assetId} onChange={(event) => setTaskForm((c) => ({ ...c, assetId: event.target.value }))}>
+                  <option value="">No specific asset</option>
+                  {assets.map((asset) => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.name} ({asset.category})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="task-title">Title</label>
+                <input id="task-title" value={taskForm.title} onChange={(event) => setTaskForm((c) => ({ ...c, title: event.target.value }))} />
+              </div>
+              <div className="field">
+                <label htmlFor="task-priority">Priority</label>
+                <select id="task-priority" value={taskForm.priority} onChange={(event) => setTaskForm((c) => ({ ...c, priority: event.target.value as MaintenancePriority }))}>
+                  <option value="LOW">LOW</option>
+                  <option value="MEDIUM">MEDIUM</option>
+                  <option value="HIGH">HIGH</option>
+                  <option value="URGENT">URGENT</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="task-due">Due Date</label>
+                <input id="task-due" type="date" value={taskForm.dueDate} onChange={(event) => setTaskForm((c) => ({ ...c, dueDate: event.target.value }))} />
+              </div>
+              <div className="field">
+                <label htmlFor="task-estimated">Estimated Cost</label>
+                <input id="task-estimated" type="number" step="0.01" min="0" value={taskForm.estimatedCost} onChange={(event) => setTaskForm((c) => ({ ...c, estimatedCost: event.target.value }))} />
+              </div>
+              <div className="field">
+                <label htmlFor="task-assigned">Assign To</label>
+                <select id="task-assigned" value={taskForm.assignedToId} onChange={(event) => setTaskForm((c) => ({ ...c, assignedToId: event.target.value }))}>
+                  <option value="">Unassigned</option>
+                  {assignableUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="task-doc-url">Supporting Document URL</label>
+                <input id="task-doc-url" value={taskForm.invoiceFileUrl} onChange={(event) => setTaskForm((c) => ({ ...c, invoiceFileUrl: event.target.value }))} />
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="task-description">Description</label>
+              <textarea id="task-description" value={taskForm.description} onChange={(event) => setTaskForm((c) => ({ ...c, description: event.target.value }))} />
+            </div>
+            <button type="button" className="btn-primary" disabled={saving} onClick={() => void createTask()}>
+              {saving ? "Saving..." : "Create Task"}
+            </button>
+          </article>
 
-      <article className="card grid">
-        <h3>Pending Approval</h3>
-        {pendingApproval.length === 0 ? (
-          <p className="lead">No tasks waiting for approval.</p>
-        ) : (
-          pendingApproval.map((task) => {
-            const isProcessing = processingId === task.id;
-            return (
-              <article key={task.id} className="decision-card">
-                <div className="status-line">
-                  <span className="status-pill status-pending_review">OPEN</span>
-                  <span className="lead">{task.priority}</span>
-                </div>
-                <h4>{task.title}</h4>
-                <p className="lead">{task.description ?? "No description"}</p>
-                <p className="lead">
-                  Asset: {task.asset?.name ?? "None"} | Due: {dateLabel(task.dueDate)}
-                </p>
-                <p className="lead">
-                  Logged by: {task.createdBy?.name ?? "Unknown"} ({task.createdBy?.role ?? "Unknown"})
-                </p>
-                <div className="grid grid-2">
-                  <div className="field">
-                    <label>Assign To</label>
-                    <select
-                      value={taskAssignments[task.id] ?? task.assignedToId ?? ""}
-                      onChange={(event) =>
-                        setTaskAssignments((current) => ({
-                          ...current,
-                          [task.id]: event.target.value
-                        }))
-                      }
-                    >
-                      <option value="">Unassigned</option>
-                      {assignableUsers.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name} ({user.role})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Reject Reason</label>
-                    <input
-                      value={taskRejectReasons[task.id] ?? ""}
-                      onChange={(event) =>
-                        setTaskRejectReasons((current) => ({
-                          ...current,
-                          [task.id]: event.target.value
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="action-row">
-                  <button type="button" className="btn-primary" disabled={isProcessing} onClick={() => void approveTask(task.id)}>
-                    {isProcessing ? "Processing..." : "Approve Task"}
-                  </button>
-                  <button type="button" className="btn-secondary" disabled={isProcessing} onClick={() => void rejectTask(task)}>
-                    {isProcessing ? "Processing..." : "Reject Task"}
-                  </button>
-                </div>
-              </article>
-            );
-          })
-        )}
-      </article>
+          <article className="card grid">
+            <h3>Pending Approval</h3>
+            {pendingApproval.length === 0 ? (
+              <p className="lead">No tasks waiting for approval.</p>
+            ) : (
+              pendingApproval.map((task) => {
+                const isProcessing = processingId === task.id;
+                return (
+                  <article key={task.id} className="decision-card">
+                    <div className="status-line">
+                      <span className="status-pill status-pending_review">OPEN</span>
+                      <span className="lead">{task.priority}</span>
+                    </div>
+                    <h4>{task.title}</h4>
+                    <p className="lead">{task.description ?? "No description"}</p>
+                    <p className="lead">
+                      Asset: {task.asset?.name ?? "None"} | Due: {dateLabel(task.dueDate)}
+                    </p>
+                    <p className="lead">
+                      Logged by: {task.createdBy?.name ?? "Unknown"} ({task.createdBy?.role ?? "Unknown"})
+                    </p>
+                    <div className="grid grid-2">
+                      <div className="field">
+                        <label>Assign To</label>
+                        <select
+                          value={taskAssignments[task.id] ?? task.assignedToId ?? ""}
+                          onChange={(event) =>
+                            setTaskAssignments((current) => ({
+                              ...current,
+                              [task.id]: event.target.value
+                            }))
+                          }
+                        >
+                          <option value="">Unassigned</option>
+                          {assignableUsers.map((user) => (
+                            <option key={user.id} value={user.id}>
+                              {user.name} ({user.role})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="field">
+                        <label>Reject Reason</label>
+                        <input
+                          value={taskRejectReasons[task.id] ?? ""}
+                          onChange={(event) =>
+                            setTaskRejectReasons((current) => ({
+                              ...current,
+                              [task.id]: event.target.value
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="action-row">
+                      <button type="button" className="btn-primary" disabled={isProcessing} onClick={() => void approveTask(task.id)}>
+                        {isProcessing ? "Processing..." : "Approve Task"}
+                      </button>
+                      <button type="button" className="btn-secondary" disabled={isProcessing} onClick={() => void rejectTask(task)}>
+                        {isProcessing ? "Processing..." : "Reject Task"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })
+            )}
+          </article>
 
-      <article className="card grid">
-        <h3>In Progress</h3>
-        {inProgress.length === 0 ? (
-          <p className="lead">No tasks in progress.</p>
-        ) : (
-          inProgress.map((task) => {
-            const isProcessing = processingId === task.id;
-            return (
-              <article key={task.id} className="decision-card">
-                <div className="status-line">
-                  <span className="status-pill status-active">IN_PROGRESS</span>
-                  <span className="lead">{task.assignedTo?.name ?? "Unassigned"}</span>
-                </div>
-                <h4>{task.title}</h4>
-                <p className="lead">Estimated: {amountLabel(task.estimatedCost)} | Due: {dateLabel(task.dueDate)}</p>
-                <div className="grid grid-2">
-                  <div className="field">
-                    <label>Actual Cost</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={taskCompletionCost[task.id] ?? ""}
-                      onChange={(event) =>
-                        setTaskCompletionCost((current) => ({
-                          ...current,
-                          [task.id]: event.target.value
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="field">
-                    <label>Supporting Document URL</label>
-                    <input
-                      value={taskCompletionDocs[task.id] ?? task.invoiceFileUrl ?? ""}
-                      onChange={(event) =>
-                        setTaskCompletionDocs((current) => ({
-                          ...current,
-                          [task.id]: event.target.value
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="field">
-                  <label>Upload Supporting Document</label>
-                  <input
-                    type="file"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) {
-                        void uploadTaskDoc(task.id, file);
-                      }
-                    }}
-                  />
-                </div>
-                <div className="action-row">
-                  <button type="button" className="btn-primary" disabled={isProcessing} onClick={() => void completeTask(task.id)}>
-                    {isProcessing ? "Processing..." : "Mark Complete"}
-                  </button>
-                </div>
-              </article>
-            );
-          })
-        )}
-      </article>
+          <article className="card grid">
+            <h3>In Progress</h3>
+            {inProgress.length === 0 ? (
+              <p className="lead">No tasks in progress.</p>
+            ) : (
+              inProgress.map((task) => {
+                const isProcessing = processingId === task.id;
+                return (
+                  <article key={task.id} className="decision-card">
+                    <div className="status-line">
+                      <span className="status-pill status-active">IN_PROGRESS</span>
+                      <span className="lead">{task.assignedTo?.name ?? "Unassigned"}</span>
+                    </div>
+                    <h4>{task.title}</h4>
+                    <p className="lead">Estimated: {amountLabel(task.estimatedCost)} | Due: {dateLabel(task.dueDate)}</p>
+                    <div className="grid grid-2">
+                      <div className="field">
+                        <label>Actual Cost</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={taskCompletionCost[task.id] ?? ""}
+                          onChange={(event) =>
+                            setTaskCompletionCost((current) => ({
+                              ...current,
+                              [task.id]: event.target.value
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Supporting Document URL</label>
+                        <input
+                          value={taskCompletionDocs[task.id] ?? task.invoiceFileUrl ?? ""}
+                          onChange={(event) =>
+                            setTaskCompletionDocs((current) => ({
+                              ...current,
+                              [task.id]: event.target.value
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="field">
+                      <label>Upload Supporting Document</label>
+                      <input
+                        type="file"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) {
+                            void uploadTaskDoc(task.id, file);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="action-row">
+                      <button type="button" className="btn-primary" disabled={isProcessing} onClick={() => void completeTask(task.id)}>
+                        {isProcessing ? "Processing..." : "Mark Complete"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })
+            )}
+          </article>
+        </>
       ) : null}
 
       {showAssets ? (
