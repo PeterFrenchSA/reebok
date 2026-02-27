@@ -47,6 +47,10 @@ type User = {
 };
 
 type PanelState = { type: "idle" | "success" | "error"; message?: string };
+type AdminMaintenanceWorkflowProps = {
+  showAssets?: boolean;
+  showMaintenance?: boolean;
+};
 
 type AssetForm = {
   name: string;
@@ -133,7 +137,10 @@ function amountLabel(value?: string | number | null): string {
   return `ZAR ${Number(value).toFixed(2)}`;
 }
 
-export function AdminMaintenanceWorkflow() {
+export function AdminMaintenanceWorkflow({
+  showAssets = true,
+  showMaintenance = true
+}: AdminMaintenanceWorkflowProps) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -479,55 +486,58 @@ export function AdminMaintenanceWorkflow() {
       {state.type === "error" ? <p className="notice error">{state.message}</p> : null}
       {state.type === "success" ? <p className="notice success">{state.message}</p> : null}
 
-      <article className="card grid">
-        <h3>Register Asset</h3>
-        <div className="grid grid-2">
-          <div className="field">
-            <label htmlFor="asset-name">Name</label>
-            <input id="asset-name" value={assetForm.name} onChange={(event) => setAssetForm((c) => ({ ...c, name: event.target.value }))} />
+      {showAssets ? (
+        <article className="card grid">
+          <h3>Register Asset</h3>
+          <div className="grid grid-2">
+            <div className="field">
+              <label htmlFor="asset-name">Name</label>
+              <input id="asset-name" value={assetForm.name} onChange={(event) => setAssetForm((c) => ({ ...c, name: event.target.value }))} />
+            </div>
+            <div className="field">
+              <label htmlFor="asset-category">Category</label>
+              <input id="asset-category" value={assetForm.category} onChange={(event) => setAssetForm((c) => ({ ...c, category: event.target.value }))} />
+            </div>
+            <div className="field">
+              <label htmlFor="asset-serial">Serial Number</label>
+              <input id="asset-serial" value={assetForm.serialNumber} onChange={(event) => setAssetForm((c) => ({ ...c, serialNumber: event.target.value }))} />
+            </div>
+            <div className="field">
+              <label htmlFor="asset-location">Location</label>
+              <input id="asset-location" value={assetForm.location} onChange={(event) => setAssetForm((c) => ({ ...c, location: event.target.value }))} />
+            </div>
+            <div className="field">
+              <label htmlFor="asset-status">Status</label>
+              <select id="asset-status" value={assetForm.status} onChange={(event) => setAssetForm((c) => ({ ...c, status: event.target.value as AssetStatus }))}>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
+                <option value="RETIRED">RETIRED</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="asset-warranty-date">Warranty Expiry</label>
+              <input id="asset-warranty-date" type="date" value={assetForm.warrantyExpiry} onChange={(event) => setAssetForm((c) => ({ ...c, warrantyExpiry: event.target.value }))} />
+            </div>
+            <div className="field">
+              <label htmlFor="asset-purchase-date">Purchase Date</label>
+              <input id="asset-purchase-date" type="date" value={assetForm.purchaseDate} onChange={(event) => setAssetForm((c) => ({ ...c, purchaseDate: event.target.value }))} />
+            </div>
+            <div className="field">
+              <label htmlFor="asset-warranty-file">Warranty Document URL</label>
+              <input id="asset-warranty-file" value={assetForm.warrantyFileUrl} onChange={(event) => setAssetForm((c) => ({ ...c, warrantyFileUrl: event.target.value }))} />
+            </div>
           </div>
           <div className="field">
-            <label htmlFor="asset-category">Category</label>
-            <input id="asset-category" value={assetForm.category} onChange={(event) => setAssetForm((c) => ({ ...c, category: event.target.value }))} />
+            <label htmlFor="asset-notes">Notes</label>
+            <textarea id="asset-notes" value={assetForm.notes} onChange={(event) => setAssetForm((c) => ({ ...c, notes: event.target.value }))} />
           </div>
-          <div className="field">
-            <label htmlFor="asset-serial">Serial Number</label>
-            <input id="asset-serial" value={assetForm.serialNumber} onChange={(event) => setAssetForm((c) => ({ ...c, serialNumber: event.target.value }))} />
-          </div>
-          <div className="field">
-            <label htmlFor="asset-location">Location</label>
-            <input id="asset-location" value={assetForm.location} onChange={(event) => setAssetForm((c) => ({ ...c, location: event.target.value }))} />
-          </div>
-          <div className="field">
-            <label htmlFor="asset-status">Status</label>
-            <select id="asset-status" value={assetForm.status} onChange={(event) => setAssetForm((c) => ({ ...c, status: event.target.value as AssetStatus }))}>
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
-              <option value="RETIRED">RETIRED</option>
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="asset-warranty-date">Warranty Expiry</label>
-            <input id="asset-warranty-date" type="date" value={assetForm.warrantyExpiry} onChange={(event) => setAssetForm((c) => ({ ...c, warrantyExpiry: event.target.value }))} />
-          </div>
-          <div className="field">
-            <label htmlFor="asset-purchase-date">Purchase Date</label>
-            <input id="asset-purchase-date" type="date" value={assetForm.purchaseDate} onChange={(event) => setAssetForm((c) => ({ ...c, purchaseDate: event.target.value }))} />
-          </div>
-          <div className="field">
-            <label htmlFor="asset-warranty-file">Warranty Document URL</label>
-            <input id="asset-warranty-file" value={assetForm.warrantyFileUrl} onChange={(event) => setAssetForm((c) => ({ ...c, warrantyFileUrl: event.target.value }))} />
-          </div>
-        </div>
-        <div className="field">
-          <label htmlFor="asset-notes">Notes</label>
-          <textarea id="asset-notes" value={assetForm.notes} onChange={(event) => setAssetForm((c) => ({ ...c, notes: event.target.value }))} />
-        </div>
-        <button type="button" className="btn-primary" disabled={saving} onClick={() => void createAsset()}>
-          {saving ? "Saving..." : "Create Asset"}
-        </button>
-      </article>
+          <button type="button" className="btn-primary" disabled={saving} onClick={() => void createAsset()}>
+            {saving ? "Saving..." : "Create Asset"}
+          </button>
+        </article>
+      ) : null}
 
+      {showMaintenance ? (
       <article className="card grid">
         <h3>Log Maintenance Task</h3>
         <div className="grid grid-2">
@@ -722,7 +732,9 @@ export function AdminMaintenanceWorkflow() {
           })
         )}
       </article>
+      ) : null}
 
+      {showAssets ? (
       <article className="card grid">
         <h3>Assets Registry</h3>
         {assets.length === 0 ? (
@@ -815,7 +827,9 @@ export function AdminMaintenanceWorkflow() {
           })
         )}
       </article>
+      ) : null}
 
+      {showMaintenance ? (
       <article className="card grid">
         <h3>Completed / Rejected Tasks</h3>
         {closed.length === 0 ? (
@@ -840,6 +854,7 @@ export function AdminMaintenanceWorkflow() {
           ))
         )}
       </article>
+      ) : null}
     </section>
   );
 }
