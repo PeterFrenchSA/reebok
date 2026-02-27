@@ -1,4 +1,4 @@
-import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
+import { IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         provider: parsed.data.provider,
         status: IntegrationStatus.CONNECTED,
         accountLabel: parsed.data.accountLabel,
-        settings: parsed.data.settings,
+        settings: parsed.data.settings as Prisma.InputJsonObject | undefined,
         lastSyncStatus: "Connected (credentials stored)."
       }
     });
