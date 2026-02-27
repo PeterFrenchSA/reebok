@@ -97,6 +97,21 @@ else
   SUDO="sudo"
 fi
 
+run_as_user() {
+  local user="$1"
+  shift
+
+  if [[ "${EUID}" -eq 0 ]]; then
+    runuser -u "${user}" -- "$@"
+  else
+    if ! command -v sudo >/dev/null 2>&1; then
+      echo "Error: sudo is required when not running as root" >&2
+      exit 1
+    fi
+    sudo -u "${user}" "$@"
+  fi
+}
+
 log() {
   printf "\n[%s] %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "$*"
 }
@@ -222,7 +237,7 @@ cleanup_db() {
   validate_identifier "${DB_USER}" "db-user"
 
   log "Dropping PostgreSQL database/user if they exist"
-  ${SUDO} -u postgres psql -v ON_ERROR_STOP=1 <<SQL
+  run_as_user postgres psql -v ON_ERROR_STOP=1 <<SQL
 SELECT pg_terminate_backend(pid)
 FROM pg_stat_activity
 WHERE datname = '${DB_NAME}'

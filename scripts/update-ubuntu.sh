@@ -140,6 +140,21 @@ else
   SUDO="sudo"
 fi
 
+run_as_user() {
+  local user="$1"
+  shift
+
+  if [[ "${EUID}" -eq 0 ]]; then
+    runuser -u "${user}" -- "$@"
+  else
+    if ! command -v sudo >/dev/null 2>&1; then
+      echo "Error: sudo is required when not running as root" >&2
+      exit 1
+    fi
+    sudo -u "${user}" "$@"
+  fi
+}
+
 log() {
   printf "\n[%s] %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "$*"
 }
@@ -217,9 +232,9 @@ git_pull_if_requested() {
 
   log "Running git fetch/pull"
   if [[ -z "${GIT_BRANCH}" ]]; then
-    ${SUDO} -u "${APP_USER}" bash -lc "cd \"${APP_DIR}\" && git fetch ${GIT_REMOTE} --prune && git pull --ff-only"
+    run_as_user "${APP_USER}" bash -lc "cd \"${APP_DIR}\" && git fetch ${GIT_REMOTE} --prune && git pull --ff-only"
   else
-    ${SUDO} -u "${APP_USER}" bash -lc "cd \"${APP_DIR}\" && git fetch ${GIT_REMOTE} --prune && git checkout ${GIT_BRANCH} && git pull --ff-only ${GIT_REMOTE} ${GIT_BRANCH}"
+    run_as_user "${APP_USER}" bash -lc "cd \"${APP_DIR}\" && git fetch ${GIT_REMOTE} --prune && git checkout ${GIT_BRANCH} && git pull --ff-only ${GIT_REMOTE} ${GIT_BRANCH}"
   fi
 }
 
@@ -247,36 +262,36 @@ create_stage_release() {
 build_stage_release() {
   log "Installing dependencies in staged release"
   if [[ -f "${STAGE_DIR}/package-lock.json" ]]; then
-    ${SUDO} -u "${APP_USER}" bash -lc "cd \"${STAGE_DIR}\" && npm ci"
+    run_as_user "${APP_USER}" bash -lc "cd \"${STAGE_DIR}\" && npm ci"
   else
-    ${SUDO} -u "${APP_USER}" bash -lc "cd \"${STAGE_DIR}\" && npm install"
+    run_as_user "${APP_USER}" bash -lc "cd \"${STAGE_DIR}\" && npm install"
   fi
 
-  ${SUDO} -u "${APP_USER}" bash -lc "set -a; source \"${STAGE_DIR}/.env.production\"; set +a; cd \"${STAGE_DIR}\"; npm run prisma:generate"
+  run_as_user "${APP_USER}" bash -lc "set -a; source \"${STAGE_DIR}/.env.production\"; set +a; cd \"${STAGE_DIR}\"; npm run prisma:generate"
 
   if [[ "${SKIP_MIGRATE}" != "true" ]]; then
     if compgen -G "${STAGE_DIR}/prisma/migrations/*/migration.sql" >/dev/null; then
-      ${SUDO} -u "${APP_USER}" bash -lc "set -a; source \"${STAGE_DIR}/.env.production\"; set +a; cd \"${STAGE_DIR}\"; npx prisma migrate deploy"
+      run_as_user "${APP_USER}" bash -lc "set -a; source \"${STAGE_DIR}/.env.production\"; set +a; cd \"${STAGE_DIR}\"; npx prisma migrate deploy"
     else
-      ${SUDO} -u "${APP_USER}" bash -lc "set -a; source \"${STAGE_DIR}/.env.production\"; set +a; cd \"${STAGE_DIR}\"; npx prisma db push"
+      run_as_user "${APP_USER}" bash -lc "set -a; source \"${STAGE_DIR}/.env.production\"; set +a; cd \"${STAGE_DIR}\"; npx prisma db push"
     fi
   fi
 
   if [[ "${SKIP_BUILD}" != "true" ]]; then
     log "Building staged release"
-    ${SUDO} -u "${APP_USER}" bash -lc "set -a; source \"${STAGE_DIR}/.env.production\"; set +a; cd \"${STAGE_DIR}\"; npm run build"
+    run_as_user "${APP_USER}" bash -lc "set -a; source \"${STAGE_DIR}/.env.production\"; set +a; cd \"${STAGE_DIR}\"; npm run build"
   fi
 }
 
 start_temp_server() {
   log "Starting temporary server on port ${TEMP_PORT}"
-  ${SUDO} -u "${APP_USER}" bash -lc "set -a; source \"${STAGE_DIR}/.env.production\"; set +a; cd \"${STAGE_DIR}\"; nohup npm run start -- -p ${TEMP_PORT} > \"${STAGE_DIR}/temp-server.log\" 2>&1 & echo \$! > \"${STAGE_DIR}/temp-server.pid\""
+  run_as_user "${APP_USER}" bash -lc "set -a; source \"${STAGE_DIR}/.env.production\"; set +a; cd \"${STAGE_DIR}\"; nohup npm run start -- -p ${TEMP_PORT} > \"${STAGE_DIR}/temp-server.log\" 2>&1 & echo \$! > \"${STAGE_DIR}/temp-server.pid\""
 
   TEMP_PID="$(cat "${STAGE_DIR}/temp-server.pid")"
 
   if ! health_check "${TEMP_PORT}" "${HEALTH_PATH}"; then
     echo "Error: temporary server failed health check on port ${TEMP_PORT}" >&2
-    ${SUDO} -u "${APP_USER}" bash -lc "kill -9 ${TEMP_PID} >/dev/null 2>&1 || true"
+    run_as_user "${APP_USER}" bash -lc "kill -9 ${TEMP_PID} >/dev/null 2>&1 || true"
     exit 1
   fi
 }
@@ -330,7 +345,7 @@ cleanup() {
     fi
 
     if [[ -n "${TEMP_PID}" ]]; then
-      ${SUDO} -u "${APP_USER}" bash -lc "kill -9 ${TEMP_PID} >/dev/null 2>&1 || true"
+      run_as_user "${APP_USER}" bash -lc "kill -9 ${TEMP_PID} >/dev/null 2>&1 || true"
     fi
 
     if [[ -n "${STAGE_DIR}" && -d "${STAGE_DIR}" ]]; then
@@ -341,7 +356,7 @@ cleanup() {
   fi
 
   if [[ -n "${TEMP_PID}" ]]; then
-    ${SUDO} -u "${APP_USER}" bash -lc "kill -9 ${TEMP_PID} >/dev/null 2>&1 || true"
+    run_as_user "${APP_USER}" bash -lc "kill -9 ${TEMP_PID} >/dev/null 2>&1 || true"
   fi
 
   if [[ -n "${STAGE_DIR}" && -d "${STAGE_DIR}" ]]; then

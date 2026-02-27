@@ -156,6 +156,21 @@ else
   SUDO="sudo"
 fi
 
+run_as_user() {
+  local user="$1"
+  shift
+
+  if [[ "${EUID}" -eq 0 ]]; then
+    runuser -u "${user}" -- "$@"
+  else
+    if ! command -v sudo >/dev/null 2>&1; then
+      echo "Error: sudo is required when not running as root" >&2
+      exit 1
+    fi
+    sudo -u "${user}" "$@"
+  fi
+}
+
 log() {
   printf "\n[%s] %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "$*"
 }
@@ -202,7 +217,7 @@ configure_postgres() {
   local sql_db_password
   sql_db_password="$(printf "%s" "${DB_PASSWORD}" | sed "s/'/''/g")"
 
-  ${SUDO} -u postgres psql -v ON_ERROR_STOP=1 <<SQL
+  run_as_user postgres psql -v ON_ERROR_STOP=1 <<SQL
 DO
 \$\$
 BEGIN
@@ -215,10 +230,10 @@ END
 \$\$;
 SQL
 
-  ${SUDO} -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1 || \
-    ${SUDO} -u postgres createdb -O "${DB_USER}" "${DB_NAME}"
+  run_as_user postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1 || \
+    run_as_user postgres createdb -O "${DB_USER}" "${DB_NAME}"
 
-  ${SUDO} -u postgres psql -v ON_ERROR_STOP=1 <<SQL
+  run_as_user postgres psql -v ON_ERROR_STOP=1 <<SQL
 GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};
 SQL
 }
@@ -264,9 +279,9 @@ install_app_dependencies() {
   cd "${APP_DIR}"
 
   if [[ -f "package-lock.json" ]]; then
-    ${SUDO} -u "${APP_USER}" npm ci
+    run_as_user "${APP_USER}" npm ci
   else
-    ${SUDO} -u "${APP_USER}" npm install
+    run_as_user "${APP_USER}" npm install
   fi
 }
 
@@ -274,26 +289,26 @@ run_prisma_and_build() {
   log "Running Prisma and building app"
   cd "${APP_DIR}"
 
-  ${SUDO} -u "${APP_USER}" bash -lc "cd \"${APP_DIR}\" && npm run prisma:generate"
+  run_as_user "${APP_USER}" bash -lc "cd \"${APP_DIR}\" && npm run prisma:generate"
 
   if compgen -G "${APP_DIR}/prisma/migrations/*/migration.sql" >/dev/null; then
-    ${SUDO} -u "${APP_USER}" bash -lc "set -a; source \"${APP_DIR}/.env.production\"; set +a; cd \"${APP_DIR}\"; npx prisma migrate deploy"
+    run_as_user "${APP_USER}" bash -lc "set -a; source \"${APP_DIR}/.env.production\"; set +a; cd \"${APP_DIR}\"; npx prisma migrate deploy"
   else
-    ${SUDO} -u "${APP_USER}" bash -lc "set -a; source \"${APP_DIR}/.env.production\"; set +a; cd \"${APP_DIR}\"; npx prisma db push"
+    run_as_user "${APP_USER}" bash -lc "set -a; source \"${APP_DIR}/.env.production\"; set +a; cd \"${APP_DIR}\"; npx prisma db push"
   fi
 
   if [[ "${SKIP_SEED}" != "true" ]]; then
     local fee_count
-    fee_count="$(${SUDO} -u postgres psql -d "${DB_NAME}" -tAc 'SELECT COUNT(*) FROM "FeeConfig";' 2>/dev/null || echo 0)"
+    fee_count="$(run_as_user postgres psql -d "${DB_NAME}" -tAc 'SELECT COUNT(*) FROM "FeeConfig";' 2>/dev/null || echo 0)"
     if [[ "${fee_count}" == "0" ]]; then
       log "Seeding baseline data"
-      ${SUDO} -u "${APP_USER}" bash -lc "set -a; source \"${APP_DIR}/.env.production\"; set +a; cd \"${APP_DIR}\"; npm run prisma:seed"
+      run_as_user "${APP_USER}" bash -lc "set -a; source \"${APP_DIR}/.env.production\"; set +a; cd \"${APP_DIR}\"; npm run prisma:seed"
     else
       log "Skipping seed (FeeConfig already has data)"
     fi
   fi
 
-  ${SUDO} -u "${APP_USER}" bash -lc "set -a; source \"${APP_DIR}/.env.production\"; set +a; cd \"${APP_DIR}\"; npm run build"
+  run_as_user "${APP_USER}" bash -lc "set -a; source \"${APP_DIR}/.env.production\"; set +a; cd \"${APP_DIR}\"; npm run build"
 }
 
 create_systemd_service() {
