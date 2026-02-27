@@ -33,7 +33,10 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 
   if (parsed.data.action === "launch") {
-    if (![DecisionStatus.PENDING_REVIEW, DecisionStatus.REJECTED].includes(existing.status)) {
+    if (
+      existing.status !== DecisionStatus.PENDING_REVIEW &&
+      existing.status !== DecisionStatus.REJECTED
+    ) {
       return NextResponse.json(
         { error: "Only pending/rejected decisions can be launched." },
         { status: 400 }
