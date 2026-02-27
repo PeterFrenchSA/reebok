@@ -9,6 +9,8 @@ import {
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { calculateNights } from "@/lib/booking";
+import { buildManageBookingUrl, generateBookingManageToken, getAppBaseUrl } from "@/lib/booking-manage";
+import { renderEmailTemplate } from "@/lib/email-templates";
 import { calculateBookingFees } from "@/lib/fees";
 import { getSessionUser } from "@/lib/auth";
 import { getApproverEmails, sendMail } from "@/lib/mail";
@@ -82,6 +84,10 @@ function sumGuests(payload: z.infer<typeof createBookingSchema>): number {
     b.visitorAdult +
     b.visitorChildUnder6
   );
+}
+
+function asDateLabel(value: Date): string {
+  return value.toISOString().slice(0, 10);
 }
 
 async function getActiveFeeConfig(bookingStartDate: Date) {
@@ -242,6 +248,8 @@ export async function POST(req: NextRequest) {
       seasonalRates
     );
 
+    const manageToken = generateBookingManageToken();
+
     const booking = await prisma.booking.create({
       data: {
         source,
@@ -253,6 +261,7 @@ export async function POST(req: NextRequest) {
         totalGuests,
         petCount: payload.petCount,
         notes: payload.notes,
+        manageToken,
         requestedById: user?.id,
         externalLeadName: payload.externalLeadName,
         externalLeadEmail: payload.externalLeadEmail,
@@ -307,22 +316,39 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    const requesterEmail = booking.requestedBy?.email ?? booking.externalLeadEmail;
+    const manageUrl = buildManageBookingUrl(booking.id, booking.manageToken ?? undefined, requesterEmail ?? undefined);
+    const commonTemplateContext = {
+      BOOKING_REFERENCE: booking.id,
+      START_DATE: asDateLabel(booking.startDate),
+      END_DATE: asDateLabel(booking.endDate),
+      TOTAL_GUESTS: String(booking.totalGuests),
+      PET_COUNT: String(booking.petCount),
+      CURRENCY: booking.currency,
+      TOTAL_AMOUNT: String(booking.totalAmount ?? 0),
+      SOURCE: booking.source,
+      SCOPE: booking.scope,
+      REJECTION_REASON: "",
+      MANAGE_URL: manageUrl,
+      ADMIN_BOOKINGS_URL: `${getAppBaseUrl()}/admin/bookings`
+    };
+
+    if (requesterEmail) {
+      const requesterTemplate = await renderEmailTemplate("BOOKING_REQUEST_RECEIVED", commonTemplateContext);
+      await sendMail({
+        to: requesterEmail,
+        subject: requesterTemplate.subject,
+        text: requesterTemplate.text
+      });
+    }
+
     const approverEmails = getApproverEmails();
     if (approverEmails.length > 0) {
+      const approverTemplate = await renderEmailTemplate("BOOKING_APPROVAL_REQUIRED", commonTemplateContext);
       await sendMail({
         to: approverEmails,
-        subject: `Booking approval required: ${startDate.toISOString().slice(0, 10)} to ${endDate
-          .toISOString()
-          .slice(0, 10)}`,
-        text: [
-          "A new booking requires approval.",
-          `Booking ID: ${booking.id}`,
-          `Source: ${booking.source}`,
-          `Scope: ${booking.scope}`,
-          `Guests: ${booking.totalGuests}`,
-          `Pets: ${booking.petCount}`,
-          `Estimated amount: ${booking.currency} ${booking.totalAmount ?? 0}`
-        ].join("\n")
+        subject: approverTemplate.subject,
+        text: approverTemplate.text
       });
     }
 

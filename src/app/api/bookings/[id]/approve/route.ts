@@ -1,11 +1,17 @@
 import { BookingAuditAction, BookingStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
+import { buildManageBookingUrl, generateBookingManageToken, getAppBaseUrl } from "@/lib/booking-manage";
+import { renderEmailTemplate } from "@/lib/email-templates";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+function asDateLabel(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
   const user = await getSessionUser(req);
@@ -52,12 +58,35 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   const requesterEmail = booking.requestedBy?.email ?? booking.externalLeadEmail;
   if (requesterEmail) {
+    let manageToken = booking.manageToken;
+    if (!manageToken) {
+      manageToken = generateBookingManageToken();
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { manageToken }
+      });
+    }
+
+    const manageUrl = buildManageBookingUrl(booking.id, manageToken, requesterEmail);
+    const template = await renderEmailTemplate("BOOKING_APPROVED", {
+      BOOKING_REFERENCE: booking.id,
+      START_DATE: asDateLabel(booking.startDate),
+      END_DATE: asDateLabel(booking.endDate),
+      TOTAL_GUESTS: String(booking.totalGuests),
+      PET_COUNT: String(booking.petCount),
+      CURRENCY: booking.currency,
+      TOTAL_AMOUNT: String(booking.totalAmount ?? 0),
+      SOURCE: booking.source,
+      SCOPE: booking.scope,
+      REJECTION_REASON: "",
+      MANAGE_URL: manageUrl,
+      ADMIN_BOOKINGS_URL: `${getAppBaseUrl()}/admin/bookings`
+    });
+
     await sendMail({
       to: requesterEmail,
-      subject: `Booking approved (${booking.startDate.toISOString().slice(0, 10)} to ${booking.endDate
-        .toISOString()
-        .slice(0, 10)})`,
-      text: `Your booking (${booking.id}) is approved. Amount due: ${booking.currency} ${booking.totalAmount ?? 0}.`
+      subject: template.subject,
+      text: template.text
     });
   }
 

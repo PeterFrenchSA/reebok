@@ -12,6 +12,7 @@ const adminLinks: Array<{ href: Route; label: string }> = [
   { href: "/admin/users", label: "User Administration" },
   { href: "/admin/feedback", label: "Guest Feedback" },
   { href: "/admin/finances", label: "Finances" },
+  { href: "/admin/templates", label: "Email Templates" },
   { href: "/admin/decisions", label: "Decisions" }
 ];
 

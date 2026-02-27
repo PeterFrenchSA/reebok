@@ -88,6 +88,11 @@ export function MemberBookingsPanel() {
           </p>
           <p className="lead">Pets: {booking.petCount ?? 0}</p>
           <p className="lead">Reference: {booking.id}</p>
+          <div className="action-row">
+            <a className="btn-secondary inline-action" href={`/booking/manage?reference=${encodeURIComponent(booking.id)}`}>
+              Manage Booking
+            </a>
+          </div>
         </article>
       ))}
     </div>

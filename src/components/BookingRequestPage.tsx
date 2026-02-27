@@ -29,6 +29,7 @@ export function BookingRequestPage() {
   const [childrenUnder6, setChildrenUnder6] = useState(0);
   const [petCount, setPetCount] = useState(0);
   const [notes, setNotes] = useState("");
+  const [manageReference, setManageReference] = useState("");
   const [petNotice, setPetNotice] = useState(DEFAULT_PET_NOTICE);
 
   useEffect(() => {
@@ -239,6 +240,33 @@ export function BookingRequestPage() {
             <li>Members can sign in and use `/member` for booking history.</li>
             <li>Admins can sign in and use `/admin` to manage users and credentials.</li>
           </ul>
+        </article>
+
+        <article className="card grid">
+          <h2>Manage Existing Booking</h2>
+          <p className="lead">
+            Have a booking reference from email? Open your existing booking and edit dates, guests, notes, and contact details.
+          </p>
+          <div className="field">
+            <label htmlFor="manage-reference">Booking Reference</label>
+            <input
+              id="manage-reference"
+              value={manageReference}
+              onChange={(event) => setManageReference(event.target.value)}
+              placeholder="e.g. cmf..."
+            />
+          </div>
+          <div className="action-row">
+            <a className="btn-secondary inline-action" href="/booking/manage">
+              Open Manage Page
+            </a>
+            <a
+              className="btn-primary inline-action"
+              href={`/booking/manage?reference=${encodeURIComponent(manageReference.trim())}`}
+            >
+              Open Reference
+            </a>
+          </div>
         </article>
 
         {submission.type !== "idle" ? (
