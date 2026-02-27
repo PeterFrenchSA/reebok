@@ -471,6 +471,180 @@ button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.inline-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.booking-calendar {
+  background: linear-gradient(160deg, #f8fcf7 0%, #fffef8 58%, #fff7ea 100%);
+  border-color: #cfdccd;
+}
+
+.booking-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: #455346;
+}
+
+.legend-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.legend-dot-available {
+  background: #d3ecdf;
+  border-color: #85be9d;
+}
+
+.legend-dot-confirmed {
+  background: #f7d8d8;
+  border-color: #d17f7f;
+}
+
+.legend-dot-tentative {
+  background: #ffe8bf;
+  border-color: #c69027;
+}
+
+.booking-calendar-selection {
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.booking-calendar-months {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.booking-month {
+  border: 1px solid #d9ded3;
+  border-radius: 0.8rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.88);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.booking-weekdays,
+.booking-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.booking-weekdays span {
+  text-align: center;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.booking-day {
+  border: 1px solid #d4d9ce;
+  border-radius: 0.65rem;
+  background: #fff;
+  min-height: 2.2rem;
+  padding: 0.3rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #243026;
+}
+
+.booking-day:hover:not(:disabled) {
+  border-color: #6ca883;
+  transform: translateY(-1px);
+}
+
+.booking-day.is-outside {
+  opacity: 0.45;
+}
+
+.booking-day.is-past {
+  color: #96a297;
+  background: #f4f6f2;
+}
+
+.booking-day.is-confirmed {
+  background: #fdeeee;
+  border-color: #d8a1a1;
+  color: #8a3f3f;
+  text-decoration: line-through;
+}
+
+.booking-day.is-tentative {
+  background: repeating-linear-gradient(
+    -45deg,
+    #fff8eb,
+    #fff8eb 6px,
+    #ffeac7 6px,
+    #ffeac7 12px
+  );
+  border-color: #d2a35c;
+  color: #7c5a1f;
+}
+
+.booking-day.is-range {
+  background: #e5f4eb;
+  border-color: #7cb08e;
+}
+
+.booking-day.is-start,
+.booking-day.is-end {
+  background: #0f6e58;
+  border-color: #0f6e58;
+  color: #fff;
+}
+
+.booking-day.is-disabled {
+  cursor: not-allowed;
+}
+
+.booking-history-item {
+  padding: 0;
+}
+
+.booking-history-summary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.95rem 1rem;
+}
+
+.booking-history-summary::-webkit-details-marker {
+  display: none;
+}
+
+.booking-history-summary::after {
+  content: "+ View details";
+  display: inline-block;
+  font-size: 0.8rem;
+  color: #48604f;
+}
+
+.booking-history-item[open] .booking-history-summary {
+  border-bottom: 1px dashed #d7ddcf;
+}
+
+.booking-history-item[open] .booking-history-summary::after {
+  content: "- Hide details";
+}
+
+.booking-history-details {
+  padding: 0.9rem 1rem 1rem;
+}
+
 .notice {
   border: 1px solid #e7dbc0;
   border-radius: 0.8rem;
@@ -501,7 +675,10 @@ button {
   }
 
   .grid-2,
-  .inline {
+  .inline,
+  .inline-3,
+  .booking-calendar-selection,
+  .booking-calendar-months {
     grid-template-columns: 1fr;
   }
 

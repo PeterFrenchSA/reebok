@@ -128,32 +128,37 @@ export function AdminBookingHistory() {
         </article>
       ) : (
         history.map((booking) => (
-          <article key={booking.id} className="card grid">
-            <div className="status-line">
+          <details key={booking.id} className="card booking-history-item">
+            <summary className="booking-history-summary">
               <span className={`status-pill status-${booking.status.toLowerCase()}`}>{booking.status}</span>
               <span className="lead">{dateLabel(booking.startDate)} to {dateLabel(booking.endDate)}</span>
+              <span className="lead">
+                {booking.source} / {booking.scope} | {booking.totalGuests} guests | {booking.petCount ?? 0} pets
+              </span>
+            </summary>
+
+            <div className="booking-history-details grid">
+              <p className="lead">Amount: {amountLabel(booking.currency, booking.totalAmount)}</p>
+              <p className="lead">
+                Requested by: {booking.requestedBy?.name ?? "External"} ({booking.requestedBy?.email ?? "No email"})
+              </p>
+              <p className="lead">Reviewed by: {booking.approvedBy?.name ?? "Not reviewed"}</p>
+              {booking.rejectionReason ? <p className="notice error">Rejection reason: {booking.rejectionReason}</p> : null}
+              <div className="audit-trail">
+                <strong>Audit Trail</strong>
+                {(booking.bookingAuditLogs ?? []).length === 0 ? (
+                  <p className="lead">No audit entries.</p>
+                ) : (
+                  booking.bookingAuditLogs?.map((log) => (
+                    <p key={log.id} className="lead">
+                      {dateLabel(log.createdAt)} {log.action}: {log.comment ?? "No comment"} (
+                      {log.actor?.name ?? log.actorRole ?? "System"})
+                    </p>
+                  ))
+                )}
+              </div>
             </div>
-            <p className="lead">
-              {booking.source} / {booking.scope} | Guests: {booking.totalGuests} | {amountLabel(booking.currency, booking.totalAmount)}
-            </p>
-            <p className="lead">Pets: {booking.petCount ?? 0}</p>
-            <p className="lead">Requested by: {booking.requestedBy?.name ?? "External"} ({booking.requestedBy?.email ?? "No email"})</p>
-            <p className="lead">Reviewed by: {booking.approvedBy?.name ?? "Not reviewed"}</p>
-            {booking.rejectionReason ? <p className="notice error">Rejection reason: {booking.rejectionReason}</p> : null}
-            <div className="audit-trail">
-              <strong>Audit Trail</strong>
-              {(booking.bookingAuditLogs ?? []).length === 0 ? (
-                <p className="lead">No audit entries.</p>
-              ) : (
-                booking.bookingAuditLogs?.map((log) => (
-                  <p key={log.id} className="lead">
-                    {dateLabel(log.createdAt)} {log.action}: {log.comment ?? "No comment"} (
-                    {log.actor?.name ?? log.actorRole ?? "System"})
-                  </p>
-                ))
-              )}
-            </div>
-          </article>
+          </details>
         ))
       )}
     </section>

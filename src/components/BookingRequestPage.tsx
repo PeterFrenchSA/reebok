@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { DEFAULT_PET_NOTICE } from "@/lib/booking-policy";
+import { BookingCalendar } from "@/components/BookingCalendar";
 
 type SubmissionState = {
   type: "idle" | "success" | "error";
@@ -9,6 +10,11 @@ type SubmissionState = {
   bookingId?: string;
   estimate?: string;
 };
+
+function parseLocalDate(value: string): Date {
+  const [year, month, day] = value.split("-").map((part) => Number(part));
+  return new Date(year, month - 1, day);
+}
 
 export function BookingRequestPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,14 +52,19 @@ export function BookingRequestPage() {
       return 0;
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = parseLocalDate(startDate);
+    const end = parseLocalDate(endDate);
     const diff = Math.ceil((end.getTime() - start.getTime()) / 86400000);
     return diff > 0 ? diff : 0;
   }, [startDate, endDate]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!startDate || !endDate || nights < 1) {
+      setSubmission({ type: "error", message: "Please select a valid check-in and check-out range." });
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmission({ type: "idle" });
 
@@ -120,18 +131,14 @@ export function BookingRequestPage() {
         </p>
 
         <form className="form" onSubmit={onSubmit}>
-          <div className="inline">
-            <div className="field">
-              <label htmlFor="startDate">Check-in</label>
-              <input id="startDate" type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="endDate">Check-out</label>
-              <input id="endDate" type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            </div>
-          </div>
+          <BookingCalendar
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+          />
 
-          <div className="inline">
+          <div className="inline inline-3">
             <div className="field">
               <label htmlFor="adults">Adults</label>
               <input
