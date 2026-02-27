@@ -5,15 +5,15 @@ import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 
-type Params = { params: { id: string } };
+type RouteContext = { params: Promise<{ id: string }> };
 
-export async function POST(req: NextRequest, { params }: Params) {
+export async function POST(req: NextRequest, { params }: RouteContext) {
   const user = await getSessionUser(req);
   if (!user || !hasPermission(user.role, "booking:approve")) {
     return NextResponse.json({ error: "Approval permission required" }, { status: 403 });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   const existing = await prisma.booking.findUnique({
     where: { id },

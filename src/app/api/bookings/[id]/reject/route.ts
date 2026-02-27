@@ -10,15 +10,15 @@ const rejectSchema = z.object({
   reason: z.string().min(3).max(500)
 });
 
-type Params = { params: { id: string } };
+type RouteContext = { params: Promise<{ id: string }> };
 
-export async function POST(req: NextRequest, { params }: Params) {
+export async function POST(req: NextRequest, { params }: RouteContext) {
   const user = await getSessionUser(req);
   if (!user || !hasPermission(user.role, "booking:approve")) {
     return NextResponse.json({ error: "Approval permission required" }, { status: 403 });
   }
 
-  const { id } = params;
+  const { id } = await params;
   const body = await req.json();
   const parsed = rejectSchema.safeParse(body);
 
