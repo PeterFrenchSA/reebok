@@ -304,9 +304,29 @@ button {
   color: #0f5d42;
 }
 
+.status-approved {
+  background: #e6f5ee;
+  color: #0f5d42;
+}
+
+.status-pending {
+  background: #fff4df;
+  color: #8c5200;
+}
+
 .status-pending_review {
   background: #fff4df;
   color: #8c5200;
+}
+
+.status-open {
+  background: #fff4df;
+  color: #8c5200;
+}
+
+.status-in_progress {
+  background: #e3effd;
+  color: #1d4f8f;
 }
 
 .status-closed {
@@ -314,9 +334,46 @@ button {
   color: #37414d;
 }
 
+.status-done {
+  background: #eceff3;
+  color: #37414d;
+}
+
 .status-rejected {
   background: #ffe9e9;
   color: #8e2f2f;
+}
+
+.status-cancelled,
+.status-out_of_service,
+.status-retired {
+  background: #ffe9e9;
+  color: #8e2f2f;
+}
+
+.audit-trail {
+  border-top: 1px dashed #d7ddcf;
+  padding-top: 0.6rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.table-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.table-item {
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.doc-link {
+  color: #0a5c48;
+  text-decoration: underline;
 }
 
 .tracking-grid {

@@ -57,6 +57,8 @@ const permissionMap: Record<UserRole, Set<AppPermission>> = {
   ]),
   FAMILY_MEMBER: new Set<AppPermission>([
     "booking:create:family",
+    "maintenance:view",
+    "maintenance:edit",
     "decision:submit",
     "decision:vote",
     "feedback:public"

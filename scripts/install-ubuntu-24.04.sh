@@ -300,6 +300,9 @@ run_prisma_and_build() {
   log "Running Prisma and building app"
   cd "${APP_DIR}"
 
+  ${SUDO} mkdir -p "${APP_DIR}/public/uploads"
+  ${SUDO} chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}/public/uploads"
+
   run_as_user "${APP_USER}" bash -lc "cd \"${APP_DIR}\" && npm run prisma:generate"
 
   if compgen -G "${APP_DIR}/prisma/migrations/*/migration.sql" >/dev/null; then

@@ -5,6 +5,11 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 
+const documentUrlSchema = z
+  .string()
+  .max(2048)
+  .refine((value) => value.startsWith("/") || /^https?:\/\//.test(value), "Document URL must be absolute or root-relative.");
+
 const expenseSchema = z.object({
   id: z.string().optional(),
   category: z.nativeEnum(ExpenseCategory).default(ExpenseCategory.OTHER),
@@ -17,7 +22,7 @@ const expenseSchema = z.object({
   serviceDate: z.coerce.date().optional(),
   dueDate: z.coerce.date().optional(),
   paidDate: z.coerce.date().optional(),
-  invoiceFileUrl: z.string().url().optional(),
+  invoiceFileUrl: documentUrlSchema.optional(),
   ocrData: z.unknown().optional()
 });
 

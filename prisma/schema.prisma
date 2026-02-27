@@ -21,6 +21,13 @@ enum BookingStatus {
   CANCELLED
 }
 
+enum BookingAuditAction {
+  CREATED
+  APPROVED
+  REJECTED
+  COMMENT
+}
+
 enum BookingSource {
   INTERNAL
   EXTERNAL_PUBLIC
@@ -147,6 +154,7 @@ model User {
   subscription         Subscription?
   bookings             Booking[]          @relation("BookingsRequested")
   approvals            Booking[]          @relation("BookingsApproved")
+  bookingAuditLogs     BookingAuditLog[]  @relation("BookingAuditActor")
   invitationsSent      Invitation[]       @relation("Inviter")
   bookingGuests        BookingGuest[]
   expensesCreated      Expense[]          @relation("ExpenseCreator")
@@ -225,6 +233,7 @@ model Booking {
   guests            BookingGuest[]
   roomAllocations   BookingRoomAllocation[]
   payments          Payment[]
+  bookingAuditLogs  BookingAuditLog[]
   feedbackEntries   Feedback[]
   externalEvents    ExternalCalendarEvent[]
   createdAt         DateTime                @default(now())
@@ -232,6 +241,21 @@ model Booking {
 
   @@index([status, startDate])
   @@index([source, startDate])
+}
+
+model BookingAuditLog {
+  id        String            @id @default(cuid())
+  bookingId String
+  booking   Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User?             @relation("BookingAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole UserRole?
+  action    BookingAuditAction
+  comment   String?
+  createdAt DateTime          @default(now())
+
+  @@index([bookingId, createdAt])
+  @@index([action, createdAt])
 }
 
 model BookingGuest {
@@ -392,6 +416,7 @@ model Asset {
   status          AssetStatus       @default(ACTIVE)
   purchaseDate    DateTime?
   warrantyExpiry  DateTime?
+  warrantyFileUrl String?
   notes           String?
   maintenanceTasks MaintenanceTask[]
   createdAt       DateTime          @default(now())

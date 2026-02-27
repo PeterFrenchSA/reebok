@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
+import { ActiveBookingsPanel } from "@/components/ActiveBookingsPanel";
 import { AdminBookingApprovals } from "@/components/AdminBookingApprovals";
+import { AdminBookingHistory } from "@/components/AdminBookingHistory";
 import { AdminDecisionVoting } from "@/components/AdminDecisionVoting";
+import { AdminExpensesLedger } from "@/components/AdminExpensesLedger";
+import { AdminFeedbackModeration } from "@/components/AdminFeedbackModeration";
 import { AdminFeeTracker } from "@/components/AdminFeeTracker";
+import { AdminMaintenanceWorkflow } from "@/components/AdminMaintenanceWorkflow";
 import { AdminUserManager } from "@/components/AdminUserManager";
 import { getSessionUserFromCookies } from "@/lib/auth";
 import { SAMPLE_ADMIN, SAMPLE_MEMBER } from "@/lib/default-users";
@@ -42,8 +47,33 @@ export default async function AdminPage() {
       </article>
 
       <article className="grid">
-        <h2>Booking Approvals</h2>
+        <h2>Active Bookings</h2>
+        <ActiveBookingsPanel adminMode />
+      </article>
+
+      <article className="grid">
+        <h2>Booking Approval Queue</h2>
         <AdminBookingApprovals />
+      </article>
+
+      <article className="grid">
+        <h2>Booking History & Audit Trail</h2>
+        <AdminBookingHistory />
+      </article>
+
+      <article className="grid">
+        <h2>Expenses Ledger & Import/Export</h2>
+        <AdminExpensesLedger />
+      </article>
+
+      <article className="grid">
+        <h2>Assets & Maintenance Workflow</h2>
+        <AdminMaintenanceWorkflow />
+      </article>
+
+      <article className="grid">
+        <h2>Feedback Moderation</h2>
+        <AdminFeedbackModeration />
       </article>
 
       <article className="grid">
@@ -59,20 +89,6 @@ export default async function AdminPage() {
       <article className="grid">
         <h2>User Management</h2>
         <AdminUserManager />
-      </article>
-
-      <article className="card grid">
-        <h2>Modules Still API-Only</h2>
-        <p className="lead">
-          These capabilities are available in backend endpoints, but still need dedicated screens:
-        </p>
-        <ul className="list">
-          <li>Rooms management</li>
-          <li>Expenses ledger and import/export</li>
-          <li>Assets and maintenance workflow</li>
-          <li>Feedback moderation</li>
-          <li>Channel sync operations</li>
-        </ul>
       </article>
     </section>
   );

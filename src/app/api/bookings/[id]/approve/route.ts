@@ -1,4 +1,4 @@
-import { BookingStatus } from "@prisma/client";
+import { BookingAuditAction, BookingStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
@@ -28,16 +28,27 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ booking: existing, message: "Booking already approved" });
   }
 
-  const booking = await prisma.booking.update({
-    where: { id },
-    data: {
-      status: BookingStatus.APPROVED,
-      approvedById: user.id,
-      approvedAt: new Date(),
-      rejectionReason: null
-    },
-    include: { requestedBy: true }
-  });
+  const [booking] = await prisma.$transaction([
+    prisma.booking.update({
+      where: { id },
+      data: {
+        status: BookingStatus.APPROVED,
+        approvedById: user.id,
+        approvedAt: new Date(),
+        rejectionReason: null
+      },
+      include: { requestedBy: true }
+    }),
+    prisma.bookingAuditLog.create({
+      data: {
+        bookingId: id,
+        actorId: user.id,
+        actorRole: user.role,
+        action: BookingAuditAction.APPROVED,
+        comment: "Booking approved."
+      }
+    })
+  ]);
 
   const requesterEmail = booking.requestedBy?.email ?? booking.externalLeadEmail;
   if (requesterEmail) {

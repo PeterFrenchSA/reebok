@@ -259,6 +259,7 @@ create_stage_release() {
     --exclude '.next' \
     --exclude '.env' \
     --exclude '.env.production' \
+    --exclude 'public/uploads' \
     "${APP_DIR}/" "${STAGE_DIR}/"
 
   ${SUDO} cp "${APP_DIR}/.env.production" "${STAGE_DIR}/.env.production"
@@ -325,6 +326,7 @@ deploy_to_primary() {
     --exclude '.env' \
     --exclude '.env.production' \
     --exclude '.git' \
+    --exclude 'public/uploads' \
     "${STAGE_DIR}/" "${APP_DIR}/"
   ${SUDO} chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}"
 

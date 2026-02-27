@@ -1,4 +1,5 @@
 import {
+  BookingAuditAction,
   BookingScope,
   BookingSource,
   BookingStatus,
@@ -113,27 +114,44 @@ export async function GET(req: NextRequest) {
   const statusFilter = statusParam && Object.values(BookingStatus).includes(statusParam)
     ? statusParam
     : undefined;
+  const take = Number(req.nextUrl.searchParams.get("take") ?? 200);
+  const mineOnly = req.nextUrl.searchParams.get("mineOnly") === "true";
 
   const isAdmin = hasPermission(user.role, "booking:manage") || hasPermission(user.role, "booking:approve");
 
   const where = isAdmin
     ? { status: statusFilter ?? undefined }
-    : {
-        requestedById: user.id,
-        status: statusFilter ?? undefined
-      };
+    : mineOnly
+      ? {
+          requestedById: user.id,
+          status: statusFilter ?? undefined
+        }
+      : {
+          OR: [
+            { requestedById: user.id },
+            { status: BookingStatus.APPROVED }
+          ],
+          status: statusFilter ?? undefined
+        };
 
   const bookings = await prisma.booking.findMany({
     where,
     orderBy: { startDate: "desc" },
     include: {
       requestedBy: { select: { name: true, email: true } },
+      approvedBy: { select: { name: true, email: true, role: true } },
       guests: true,
       roomAllocations: {
         include: { room: true }
+      },
+      bookingAuditLogs: {
+        include: {
+          actor: { select: { id: true, name: true, email: true, role: true } }
+        },
+        orderBy: { createdAt: "asc" }
       }
     },
-    take: 200
+    take: take > 0 && take <= 1000 ? take : 200
   });
 
   return NextResponse.json({ bookings });
@@ -260,12 +278,30 @@ export async function POST(req: NextRequest) {
                   guestCount: allocation.guestCount
                 }))
               }
-            : undefined
+            : undefined,
+        bookingAuditLogs: {
+          create: {
+            actorId: user?.id,
+            actorRole: user?.role,
+            action: BookingAuditAction.CREATED,
+            comment:
+              source === BookingSource.EXTERNAL_PUBLIC
+                ? "Public booking request submitted."
+                : "Member booking request submitted."
+          }
+        }
       },
       include: {
         requestedBy: { select: { name: true, email: true } },
+        approvedBy: { select: { name: true, email: true, role: true } },
         guests: true,
-        roomAllocations: { include: { room: true } }
+        roomAllocations: { include: { room: true } },
+        bookingAuditLogs: {
+          include: {
+            actor: { select: { id: true, name: true, email: true, role: true } }
+          },
+          orderBy: { createdAt: "asc" }
+        }
       }
     });
 

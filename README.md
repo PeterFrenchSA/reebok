@@ -19,6 +19,10 @@ Next.js + PostgreSQL starter platform for managing Sandeney Pty Ltd's family bea
   - Seasonal rate overrides for external visitors
 - Arrears tracking with reminder capability (no suspension)
 - Admin/member fee tracking panels (`/admin` and `/member`)
+- Admin expenses ledger UI with CSV/XLSX import/export
+- Assets and maintenance workflow UI for admin + members
+- Admin feedback moderation UI
+- Active bookings queue on admin/member pages with audit trails
 - Decision voting workflow:
   - Admin-created polls (`admins only` or `members + admins`)
   - Member-submitted decisions for admin review/launch
@@ -133,6 +137,7 @@ How it works:
 - Switches Nginx traffic to temporary instance
 - Updates primary app and restarts systemd service on port `3000`
 - Switches traffic back and removes temporary instance
+- Preserves uploaded support files in `public/uploads`
 
 ## Cleanup and Reinstall (Ubuntu 24.04)
 
@@ -160,6 +165,7 @@ sudo bash scripts/install-ubuntu-24.04.sh --skip-tls
 - `POST /api/bookings`
 - `POST /api/bookings/{id}/approve`
 - `POST /api/bookings/{id}/reject`
+- `POST /api/bookings/{id}/comment`
 - `GET|POST /api/rooms`
 - `GET|POST /api/invitations`
 - `POST /api/invitations/accept`
@@ -173,9 +179,10 @@ sudo bash scripts/install-ubuntu-24.04.sh --skip-tls
 - `GET|POST /api/expenses`
 - `GET /api/finance/export?entity=expenses&format=csv`
 - `POST /api/finance/import`
-- `GET|POST /api/maintenance/tasks`
-- `GET|POST /api/assets`
-- `GET|POST /api/feedback`
+- `GET|POST|PATCH /api/maintenance/tasks`
+- `GET|POST|PATCH /api/assets`
+- `GET|POST|PATCH /api/feedback`
+- `POST /api/uploads`
 - `GET|POST /api/decisions`
 - `PATCH /api/decisions/{id}` (launch/close/reject)
 - `POST /api/decisions/{id}/vote`

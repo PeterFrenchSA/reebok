@@ -32,7 +32,7 @@ export function MemberBookingsPanel() {
       setLoading(true);
       setState({ type: "idle" });
       try {
-        const response = await fetch("/api/bookings", { cache: "no-store" });
+        const response = await fetch("/api/bookings?mineOnly=true", { cache: "no-store" });
         const data = await response.json();
 
         if (!response.ok) {

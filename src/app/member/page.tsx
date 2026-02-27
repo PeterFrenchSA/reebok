@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ActiveBookingsPanel } from "@/components/ActiveBookingsPanel";
 import { MemberDecisionVoting } from "@/components/MemberDecisionVoting";
 import { MemberFeeTracker } from "@/components/MemberFeeTracker";
 import { MemberBookingsPanel } from "@/components/MemberBookingsPanel";
+import { MemberMaintenanceWorkflow } from "@/components/MemberMaintenanceWorkflow";
 import { getSessionUserFromCookies } from "@/lib/auth";
 
 export default async function MemberPage() {
@@ -29,13 +31,23 @@ export default async function MemberPage() {
       </article>
 
       <article className="grid">
-        <h2>My Bookings</h2>
+        <h2>Active Bookings</h2>
+        <ActiveBookingsPanel heading="Active House Bookings" emptyMessage="No active bookings currently." />
+      </article>
+
+      <article className="grid">
+        <h2>My Booking History</h2>
         <MemberBookingsPanel />
       </article>
 
       <article className="grid">
         <h2>My Fees</h2>
         <MemberFeeTracker />
+      </article>
+
+      <article className="grid">
+        <h2>Assets & Maintenance Workflow</h2>
+        <MemberMaintenanceWorkflow />
       </article>
 
       <article className="grid">
