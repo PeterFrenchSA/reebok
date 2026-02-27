@@ -278,8 +278,7 @@ export async function PATCH(req: NextRequest) {
     await sendMail({ to: approverEmails, subject: template.subject, text: template.text });
   }
 
-  const sanitizedBooking = { ...updated } as typeof updated & { manageToken?: string | null };
-  delete sanitizedBooking.manageToken;
+  const { manageToken: _manageToken, ...sanitizedBooking } = updated;
 
   return NextResponse.json({
     booking: sanitizedBooking,

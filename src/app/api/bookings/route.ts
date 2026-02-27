@@ -162,9 +162,8 @@ export async function GET(req: NextRequest) {
   });
 
   const sanitizedBookings = bookings.map((booking) => {
-    const item = { ...booking } as typeof booking & { manageToken?: string | null };
-    delete item.manageToken;
-    return item;
+    const { manageToken: _manageToken, ...sanitizedBooking } = booking;
+    return sanitizedBooking;
   });
 
   return NextResponse.json({ bookings: sanitizedBookings });
@@ -358,8 +357,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const sanitizedBooking = { ...booking } as typeof booking & { manageToken?: string | null };
-    delete sanitizedBooking.manageToken;
+    const { manageToken: _manageToken, ...sanitizedBooking } = booking;
 
     return NextResponse.json({
       booking: sanitizedBooking,
