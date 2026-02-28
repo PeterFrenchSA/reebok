@@ -274,10 +274,12 @@ model EmailTemplate {
 }
 
 model BookingPolicy {
-  id        String   @id @default("default")
-  petNotice String   @default("Please note that while the property is pet friendly, the furniture and bedrooms are not.")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default("default")
+  petNotice          String   @default("Please note that while the property is pet friendly, the furniture and bedrooms are not.")
+  guestBulletinTitle String   @default("Useful Info")
+  guestBulletinBody  String   @default("Emergency Services: 112\nHouse Manager: +27 82 000 0000\nMaintenance Callout: +27 82 111 1111\nBring your booking reference from email.\nReport damages or faults on arrival.\nFor pets, keep furniture and bedrooms pet-free.")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model BookingAuditLog {

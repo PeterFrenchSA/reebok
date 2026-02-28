@@ -22,6 +22,7 @@ Next.js + PostgreSQL starter platform for managing Sandeney Pty Ltd's family bea
 - Admin expenses ledger UI with CSV/XLSX import/export
 - Assets and maintenance workflow UI for admin + members
 - Admin feedback moderation UI
+- Admin-editable guest useful-info bulletin board
 - Active bookings queue on admin/member pages with audit trails
 - Decision voting workflow:
   - Admin-created polls (`admins only` or `members + admins`)

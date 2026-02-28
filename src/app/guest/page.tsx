@@ -3,6 +3,13 @@ import { redirect } from "next/navigation";
 import { GuestFeedbackPanel } from "@/components/GuestFeedbackPanel";
 import { MemberBookingsPanel } from "@/components/MemberBookingsPanel";
 import { getSessionUserFromCookies } from "@/lib/auth";
+import {
+  BOOKING_POLICY_ID,
+  DEFAULT_GUEST_BULLETIN_BODY,
+  DEFAULT_GUEST_BULLETIN_TITLE,
+  DEFAULT_PET_NOTICE
+} from "@/lib/booking-policy";
+import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 
 export default async function GuestPage() {
@@ -14,6 +21,24 @@ export default async function GuestPage() {
 
   const canAccessMember = hasPermission(user.role, "booking:create:family");
   const canAccessAdmin = hasPermission(user.role, "booking:manage");
+  const policy = await prisma.bookingPolicy.upsert({
+    where: { id: BOOKING_POLICY_ID },
+    update: {},
+    create: {
+      id: BOOKING_POLICY_ID,
+      petNotice: DEFAULT_PET_NOTICE,
+      guestBulletinTitle: DEFAULT_GUEST_BULLETIN_TITLE,
+      guestBulletinBody: DEFAULT_GUEST_BULLETIN_BODY
+    },
+    select: {
+      guestBulletinTitle: true,
+      guestBulletinBody: true
+    }
+  });
+  const bulletinItems = policy.guestBulletinBody
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 
   return (
     <section className="grid">
@@ -59,40 +84,13 @@ export default async function GuestPage() {
 
         <aside className="grid guest-bulletin">
           <article className="card grid">
-            <h2>Useful Info</h2>
-            <p className="lead">Important contacts and arrival reminders for all guests.</p>
-            <div className="table-list">
-              <div className="table-item">
-                <p>
-                  <strong>Emergency Services</strong>
-                </p>
-                <p className="lead">Police / Fire / Ambulance: 112</p>
-              </div>
-              <div className="table-item">
-                <p>
-                  <strong>House Manager</strong>
-                </p>
-                <p className="lead">+27 82 000 0000</p>
-                <p className="lead">For access, keys, and urgent stay support.</p>
-              </div>
-              <div className="table-item">
-                <p>
-                  <strong>Maintenance Callout</strong>
-                </p>
-                <p className="lead">+27 82 111 1111</p>
-                <p className="lead">Use for water, power, or safety-critical issues.</p>
-              </div>
-              <div className="table-item">
-                <p>
-                  <strong>Arrival Checklist</strong>
-                </p>
-                <ul className="list">
-                  <li>Bring your booking reference from email.</li>
-                  <li>Report damages or faults on arrival.</li>
-                  <li>For pets, keep furniture and bedrooms pet-free.</li>
-                </ul>
-              </div>
-            </div>
+            <h2>{policy.guestBulletinTitle}</h2>
+            <p className="lead">This notice board is maintained by administrators.</p>
+            <ul className="list">
+              {bulletinItems.map((item, index) => (
+                <li key={`${index}-${item}`}>{item}</li>
+              ))}
+            </ul>
           </article>
         </aside>
       </section>
