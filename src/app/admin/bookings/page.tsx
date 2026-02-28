@@ -15,13 +15,13 @@ export default function AdminBookingsPage() {
       <AdminBookingPolicySettings />
 
       <article className="grid">
-        <h2>Active Bookings</h2>
-        <ActiveBookingsPanel adminMode />
+        <h2>Pending Approvals</h2>
+        <AdminBookingApprovals />
       </article>
 
       <article className="grid">
-        <h2>Approvals</h2>
-        <AdminBookingApprovals />
+        <h2>Active Bookings</h2>
+        <ActiveBookingsPanel adminMode />
       </article>
 
       <article className="grid">

@@ -81,10 +81,7 @@ export function ActiveBookingsPanel({
 
     return bookings
       .filter((booking) => {
-        const isVisibleStatus =
-          booking.status === "PENDING" ||
-          booking.status === "APPROVED" ||
-          (adminMode && booking.status === "REJECTED");
+        const isVisibleStatus = booking.status === "PENDING" || booking.status === "APPROVED";
         if (!isVisibleStatus) {
           return false;
         }
