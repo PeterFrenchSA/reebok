@@ -11,6 +11,10 @@ export async function ShellNav() {
   const links = [...baseLinks];
 
   if (user) {
+    links.push({ href: "/guest", label: "Guest" });
+  }
+
+  if (user && hasPermission(user.role, "booking:create:family")) {
     links.push({ href: "/member", label: "Member" });
   }
 

@@ -10,8 +10,14 @@ const loginSchema = z.object({
   password: z.string().min(4).max(120)
 });
 
-function roleRedirect(role: UserRole): "/admin" | "/member" {
-  return role === "SUPER_ADMIN" || role === "SHAREHOLDER" ? "/admin" : "/member";
+function roleRedirect(role: UserRole): "/admin" | "/member" | "/guest" {
+  if (role === "SUPER_ADMIN" || role === "SHAREHOLDER") {
+    return "/admin";
+  }
+  if (role === "GUEST") {
+    return "/guest";
+  }
+  return "/member";
 }
 
 export async function POST(req: NextRequest) {

@@ -52,6 +52,7 @@ Next.js + PostgreSQL starter platform for managing Sandeney Pty Ltd's family bea
 - `src/app/page.tsx`: booking landing page
 - `src/app/admin`: admin section
 - `src/app/member`: member section
+- `src/app/guest`: guest booking + feedback section
 - `src/app/login`: credential sign-in page
 
 ## Setup

@@ -8,12 +8,12 @@ type LoginState = {
   message?: string;
 };
 
-function isAllowedNextPath(value: string | null): value is "/admin" | "/member" {
-  return value === "/admin" || value === "/member";
+function isAllowedNextPath(value: string | null): value is "/admin" | "/member" | "/guest" {
+  return value === "/admin" || value === "/member" || value === "/guest";
 }
 
 export default function LoginPage() {
-  const [nextPath, setNextPath] = useState<"/admin" | "/member" | null>(null);
+  const [nextPath, setNextPath] = useState<"/admin" | "/member" | "/guest" | null>(null);
 
   useEffect(() => {
     const value = new URLSearchParams(window.location.search).get("next");
@@ -47,7 +47,7 @@ export default function LoginPage() {
       }
 
       const destination =
-        nextPath ?? (typeof data.redirectTo === "string" ? data.redirectTo : "/member");
+        nextPath ?? (typeof data.redirectTo === "string" ? data.redirectTo : "/guest");
       window.location.assign(destination);
     } catch (error) {
       console.error(error);
@@ -61,8 +61,8 @@ export default function LoginPage() {
     <section className="grid grid-2">
       <article className="card grid">
         <span className="kicker">Sign In</span>
-        <h1>Member and Admin Login</h1>
-        <p className="lead">Use your email and password to access `/member` or `/admin` sections.</p>
+        <h1>Account Login</h1>
+        <p className="lead">Use your email and password to access `/guest`, `/member`, or `/admin` sections.</p>
 
         <form className="form" onSubmit={onSubmit}>
           <div className="field">

@@ -6,12 +6,17 @@ import { MemberFeeTracker } from "@/components/MemberFeeTracker";
 import { MemberBookingsPanel } from "@/components/MemberBookingsPanel";
 import { MemberMaintenanceWorkflow } from "@/components/MemberMaintenanceWorkflow";
 import { getSessionUserFromCookies } from "@/lib/auth";
+import { hasPermission } from "@/lib/rbac";
 
 export default async function MemberPage() {
   const user = await getSessionUserFromCookies();
 
   if (!user) {
     redirect("/login?next=/member");
+  }
+
+  if (!hasPermission(user.role, "booking:create:family")) {
+    redirect("/guest");
   }
 
   return (
