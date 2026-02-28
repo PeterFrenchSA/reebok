@@ -116,6 +116,13 @@ enum ReminderFrequency {
   QUARTERLY
 }
 
+enum InvitationStatus {
+  PENDING_REGISTRATION
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
 enum AssetStatus {
   ACTIVE
   OUT_OF_SERVICE
@@ -157,6 +164,7 @@ model User {
   bookingAuditLogs     BookingAuditLog[]  @relation("BookingAuditActor")
   invitationsSent      Invitation[]       @relation("Inviter")
   bookingGuests        BookingGuest[]
+  invitationsReviewed  Invitation[]       @relation("InvitationReviewer")
   expensesCreated      Expense[]          @relation("ExpenseCreator")
   paymentsMade         Payment[]          @relation("PaymentPayer")
   paymentsVerified     Payment[]          @relation("PaymentVerifier")
@@ -182,17 +190,26 @@ model ShareholderProfile {
 }
 
 model Invitation {
-  id            String    @id @default(cuid())
-  email         String
-  role          UserRole
-  token         String    @unique
-  invitedById   String
-  invitedBy     User      @relation("Inviter", fields: [invitedById], references: [id], onDelete: Cascade)
-  expiresAt     DateTime
-  acceptedAt    DateTime?
-  createdAt     DateTime  @default(now())
+  id                       String           @id @default(cuid())
+  email                    String
+  role                     UserRole
+  token                    String           @unique
+  invitedById              String
+  invitedBy                User             @relation("Inviter", fields: [invitedById], references: [id], onDelete: Cascade)
+  status                   InvitationStatus @default(PENDING_REGISTRATION)
+  registrationName         String?
+  registrationPasswordHash String?
+  registrationRequestedAt  DateTime?
+  reviewedAt               DateTime?
+  reviewedById             String?
+  reviewedBy               User?            @relation("InvitationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  rejectionReason          String?
+  expiresAt                DateTime
+  acceptedAt               DateTime?
+  createdAt                DateTime         @default(now())
 
   @@index([email, role])
+  @@index([status, createdAt])
 }
 
 model Room {

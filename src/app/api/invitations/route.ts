@@ -15,6 +15,22 @@ function makeToken(): string {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
+const invitationListSelect = {
+  id: true,
+  email: true,
+  role: true,
+  status: true,
+  registrationName: true,
+  registrationRequestedAt: true,
+  reviewedAt: true,
+  rejectionReason: true,
+  expiresAt: true,
+  acceptedAt: true,
+  createdAt: true,
+  invitedBy: { select: { id: true, name: true, email: true, role: true } },
+  reviewedBy: { select: { id: true, name: true, email: true, role: true } }
+} as const;
+
 export async function GET(req: NextRequest) {
   const user = await getSessionUser(req);
   if (!user || !hasPermission(user.role, "booking:manage")) {
@@ -23,7 +39,8 @@ export async function GET(req: NextRequest) {
 
   const invitations = await prisma.invitation.findMany({
     orderBy: { createdAt: "desc" },
-    take: 200
+    take: 200,
+    select: invitationListSelect
   });
 
   return NextResponse.json({ invitations });
@@ -57,11 +74,12 @@ export async function POST(req: NextRequest) {
       token,
       invitedById: user.id,
       expiresAt
-    }
+    },
+    select: invitationListSelect
   });
 
   const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
-  const inviteUrl = `${baseUrl}/accept-invite?token=${invitation.token}`;
+  const inviteUrl = `${baseUrl}/accept-invite?token=${token}`;
 
   await sendMail({
     to: invitation.email,
@@ -69,7 +87,9 @@ export async function POST(req: NextRequest) {
     text: [
       "You have been invited to join Reebok House Manager.",
       `Role: ${invitation.role}`,
-      `Accept invite: ${inviteUrl}`,
+      "Use the link below to register your account details.",
+      "Your registration will be reviewed by an administrator before your account is activated.",
+      `Register: ${inviteUrl}`,
       `Expires: ${invitation.expiresAt.toISOString().slice(0, 10)}`
     ].join("\n")
   });

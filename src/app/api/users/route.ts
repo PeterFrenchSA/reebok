@@ -6,6 +6,14 @@ import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 
+const createUserSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(2).max(120),
+  role: z.nativeEnum(UserRole),
+  password: z.string().min(4).max(120),
+  isActive: z.boolean().optional().default(true)
+});
+
 const updateUserSchema = z
   .object({
     userId: z.string().min(1),
@@ -111,4 +119,58 @@ export async function PATCH(req: NextRequest) {
   });
 
   return NextResponse.json({ user: updated });
+}
+
+export async function POST(req: NextRequest) {
+  const user = await getSessionUser(req);
+  if (!user || !hasPermission(user.role, "booking:manage")) {
+    return NextResponse.json({ error: "Admin permission required" }, { status: 403 });
+  }
+
+  const payload = await req.json();
+  const parsed = createUserSchema.safeParse(payload);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const email = parsed.data.email.toLowerCase();
+  const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  if (existing) {
+    return NextResponse.json({ error: "User already exists." }, { status: 409 });
+  }
+
+  const created = await prisma.$transaction(async (tx) => {
+    const userRecord = await tx.user.create({
+      data: {
+        email,
+        name: parsed.data.name,
+        role: parsed.data.role,
+        isActive: parsed.data.isActive,
+        invitedById: user.id,
+        passwordHash: hashPassword(parsed.data.password)
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    if (parsed.data.role === "SHAREHOLDER") {
+      await tx.shareholderProfile.create({
+        data: {
+          userId: userRecord.id,
+          votingEnabled: true
+        }
+      });
+    }
+
+    return userRecord;
+  });
+
+  return NextResponse.json({ user: created }, { status: 201 });
 }

@@ -169,9 +169,10 @@ sudo bash scripts/install-ubuntu-24.04.sh --skip-tls
 - `GET|POST /api/rooms`
 - `GET|POST /api/invitations`
 - `POST /api/invitations/accept`
+- `POST /api/invitations/{id}/review` (admin approve/reject of invite registrations)
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
-- `GET|PATCH /api/users` (admin user management)
+- `GET|POST|PATCH /api/users` (admin user management and direct account creation)
 - `GET|POST /api/payments`
 - `GET|POST|PATCH /api/subscriptions`
 - `POST /api/fees/calculate`

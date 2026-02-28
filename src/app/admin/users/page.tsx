@@ -7,7 +7,9 @@ export default function AdminUsersPage() {
       <article className="card grid">
         <span className="kicker">User Administration</span>
         <h1>Users & Access</h1>
-        <p className="lead">Manage account roles, activation state, and passwords.</p>
+        <p className="lead">
+          Create member/admin accounts directly, send invite links, and approve invited registrations.
+        </p>
       </article>
 
       <article className="card grid">

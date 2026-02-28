@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { getApproverEmails, sendMail } from "@/lib/mail";
+import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
   token: z.string().min(10),
-  name: z.string().min(2).max(120)
+  name: z.string().min(2).max(120),
+  password: z.string().min(4).max(120)
 });
 
 export async function POST(req: NextRequest) {
@@ -22,50 +25,59 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invitation not found" }, { status: 404 });
   }
 
-  if (invitation.acceptedAt) {
-    return NextResponse.json({ error: "Invitation already accepted" }, { status: 409 });
-  }
-
   if (invitation.expiresAt < new Date()) {
     return NextResponse.json({ error: "Invitation has expired" }, { status: 410 });
+  }
+
+  if (invitation.status === "APPROVED" || invitation.acceptedAt) {
+    return NextResponse.json({ error: "Invitation already approved" }, { status: 409 });
+  }
+
+  if (invitation.status === "PENDING_APPROVAL") {
+    return NextResponse.json(
+      { error: "Registration already submitted and awaiting admin approval." },
+      { status: 409 }
+    );
   }
 
   const inviteEmail = invitation.email.toLowerCase();
   const existingUser = await prisma.user.findUnique({ where: { email: inviteEmail } });
   if (existingUser) {
-    await prisma.invitation.update({
-      where: { id: invitation.id },
-      data: { acceptedAt: new Date() }
-    });
-
-    return NextResponse.json({
-      user: existingUser,
-      message: "User already exists. Invitation marked as accepted."
-    });
+    return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
   }
 
-  const user = await prisma.user.create({
+  const updatedInvitation = await prisma.invitation.update({
+    where: { id: invitation.id },
     data: {
-      email: inviteEmail,
-      name: parsed.data.name,
-      role: invitation.role,
-      invitedById: invitation.invitedById
+      status: "PENDING_APPROVAL",
+      registrationName: parsed.data.name.trim(),
+      registrationPasswordHash: hashPassword(parsed.data.password),
+      registrationRequestedAt: new Date(),
+      reviewedAt: null,
+      reviewedById: null,
+      rejectionReason: null
     }
   });
 
-  await prisma.invitation.update({
-    where: { id: invitation.id },
-    data: { acceptedAt: new Date() }
-  });
-
-  if (invitation.role === "SHAREHOLDER") {
-    await prisma.shareholderProfile.create({
-      data: {
-        userId: user.id,
-        votingEnabled: true
-      }
+  const approverEmails = getApproverEmails();
+  if (approverEmails.length > 0) {
+    const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
+    await sendMail({
+      to: approverEmails,
+      subject: "Invitation registration submitted",
+      text: [
+        "A new invited user has completed registration and is awaiting approval.",
+        `Email: ${inviteEmail}`,
+        `Name: ${updatedInvitation.registrationName ?? "Not provided"}`,
+        `Role requested: ${updatedInvitation.role}`,
+        `Invitation ID: ${updatedInvitation.id}`,
+        `Review in admin: ${baseUrl}/admin/users`
+      ].join("\n")
     });
   }
 
-  return NextResponse.json({ user }, { status: 201 });
+  return NextResponse.json(
+    { message: "Registration submitted successfully. Awaiting admin approval." },
+    { status: 201 }
+  );
 }
