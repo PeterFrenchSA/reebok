@@ -2,7 +2,13 @@ import { BookingAuditAction, BookingSource, BookingStatus, Prisma, UserRole } fr
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
-import { buildManageBookingUrl, getAppBaseUrl, tokensMatch } from "@/lib/booking-manage";
+import {
+  buildManageBookingUrl,
+  generateBookingManageToken,
+  getAppBaseUrl,
+  hashBookingManageToken,
+  tokensMatch
+} from "@/lib/booking-manage";
 import { calculateNights } from "@/lib/booking";
 import { renderEmailTemplate } from "@/lib/email-templates";
 import { calculateBookingFees } from "@/lib/fees";
@@ -60,7 +66,9 @@ async function resolveAccess(req: NextRequest, payload: z.infer<typeof lookupSch
     return { booking, actorLabel: "Guest (magic link)" };
   }
 
-  if (payload.email) {
+  // Email-only lookup is reserved for unauthenticated public flows.
+  // Logged-in users must rely on ownership/admin access or the manage token.
+  if (!user && payload.email) {
     const candidate = payload.email.toLowerCase();
     if (booking.externalLeadEmail?.toLowerCase() === candidate || booking.requestedBy?.email?.toLowerCase() === candidate) {
       return { booking, actorLabel: payload.email };
@@ -237,7 +245,18 @@ export async function PATCH(req: NextRequest) {
   });
 
   const requesterEmail = updated.requestedBy?.email ?? updated.externalLeadEmail ?? parsed.data.email;
-  const manageUrl = buildManageBookingUrl(updated.id, updated.manageToken ?? undefined, requesterEmail ?? undefined);
+  const approverEmails = getApproverEmails();
+  const needsManageLink = Boolean(requesterEmail) || approverEmails.length > 0;
+  let manageUrl = buildManageBookingUrl(updated.id, undefined, requesterEmail ?? undefined);
+
+  if (needsManageLink) {
+    const rawManageToken = generateBookingManageToken();
+    await prisma.booking.update({
+      where: { id: updated.id },
+      data: { manageToken: hashBookingManageToken(rawManageToken) }
+    });
+    manageUrl = buildManageBookingUrl(updated.id, rawManageToken, requesterEmail ?? undefined);
+  }
 
   if (requesterEmail) {
     const template = await renderEmailTemplate("BOOKING_REQUEST_RECEIVED", {
@@ -258,7 +277,6 @@ export async function PATCH(req: NextRequest) {
     await sendMail({ to: requesterEmail, subject: template.subject, text: template.text });
   }
 
-  const approverEmails = getApproverEmails();
   if (approverEmails.length > 0) {
     const template = await renderEmailTemplate("BOOKING_APPROVAL_REQUIRED", {
       BOOKING_REFERENCE: updated.id,

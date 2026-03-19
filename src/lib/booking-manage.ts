@@ -1,14 +1,15 @@
-import { randomBytes } from "crypto";
+import { generateOpaqueToken, hashOpaqueToken, opaqueTokensMatch } from "@/lib/tokens";
 
 export function generateBookingManageToken(): string {
-  return randomBytes(24).toString("hex");
+  return generateOpaqueToken(24);
 }
 
-export function tokensMatch(tokenA: string | null | undefined, tokenB: string | null | undefined): boolean {
-  if (!tokenA || !tokenB) {
-    return false;
-  }
-  return tokenA === tokenB;
+export function hashBookingManageToken(token: string): string {
+  return hashOpaqueToken(token);
+}
+
+export function tokensMatch(storedToken: string | null | undefined, providedToken: string | null | undefined): boolean {
+  return opaqueTokensMatch(storedToken, providedToken);
 }
 
 export function getAppBaseUrl(): string {

@@ -1,7 +1,12 @@
 import { BookingAuditAction, BookingStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
-import { buildManageBookingUrl, generateBookingManageToken, getAppBaseUrl } from "@/lib/booking-manage";
+import {
+  buildManageBookingUrl,
+  generateBookingManageToken,
+  getAppBaseUrl,
+  hashBookingManageToken
+} from "@/lib/booking-manage";
 import { renderEmailTemplate } from "@/lib/email-templates";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +16,11 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 function asDateLabel(value: Date): string {
   return value.toISOString().slice(0, 10);
+}
+
+function sanitizeBooking<T extends { manageToken?: string | null }>(booking: T) {
+  const { manageToken: _manageToken, ...safeBooking } = booking;
+  return safeBooking;
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
@@ -31,7 +41,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   }
 
   if (existing.status === BookingStatus.APPROVED) {
-    return NextResponse.json({ booking: existing, message: "Booking already approved" });
+    return NextResponse.json({ booking: sanitizeBooking(existing), message: "Booking already approved" });
   }
 
   const [booking] = await prisma.$transaction([
@@ -58,16 +68,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   const requesterEmail = booking.requestedBy?.email ?? booking.externalLeadEmail;
   if (requesterEmail) {
-    let manageToken = booking.manageToken;
-    if (!manageToken) {
-      manageToken = generateBookingManageToken();
-      await prisma.booking.update({
-        where: { id: booking.id },
-        data: { manageToken }
-      });
-    }
+    const rawManageToken = generateBookingManageToken();
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: { manageToken: hashBookingManageToken(rawManageToken) }
+    });
 
-    const manageUrl = buildManageBookingUrl(booking.id, manageToken, requesterEmail);
+    const manageUrl = buildManageBookingUrl(booking.id, rawManageToken, requesterEmail);
     const template = await renderEmailTemplate("BOOKING_APPROVED", {
       BOOKING_REFERENCE: booking.id,
       START_DATE: asDateLabel(booking.startDate),
@@ -90,5 +97,5 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     });
   }
 
-  return NextResponse.json({ booking });
+  return NextResponse.json({ booking: sanitizeBooking(booking) });
 }

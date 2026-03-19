@@ -89,7 +89,7 @@ export function ActiveBookingsPanel({
         return end >= today;
       })
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
-  }, [bookings, adminMode]);
+  }, [bookings]);
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
@@ -207,7 +207,9 @@ export function ActiveBookingsPanel({
       <article className="card grid">
         <h3>{heading}</h3>
         <p className="lead">
-          Current and upcoming booking requests with live audit trail entries.
+          {adminMode
+            ? "Current and upcoming booking requests with live audit trail entries."
+            : "Current and upcoming house occupancy, including tentative requests awaiting approval."}
         </p>
       </article>
 
@@ -234,37 +236,45 @@ export function ActiveBookingsPanel({
                 Guests: {booking.totalGuests} | {moneyLabel(booking.currency, booking.totalAmount)} | {booking.source}
               </p>
               <p className="lead">Pets: {booking.petCount ?? 0}</p>
-              <p className="lead">
-                Requester: {requester} ({requestEmail})
-              </p>
-              <p className="lead">Reference: {booking.id}</p>
-              {booking.notes ? <p className="lead">Notes: {booking.notes}</p> : null}
-              {booking.rejectionReason ? <p className="notice error">Latest rejection: {booking.rejectionReason}</p> : null}
+              {adminMode ? (
+                <>
+                  <p className="lead">
+                    Requester: {requester} ({requestEmail})
+                  </p>
+                  <p className="lead">Reference: {booking.id}</p>
+                  {booking.notes ? <p className="lead">Notes: {booking.notes}</p> : null}
+                  {booking.rejectionReason ? <p className="notice error">Latest rejection: {booking.rejectionReason}</p> : null}
 
-              {rejectionLogs.length > 0 ? (
-                <div className="audit-trail">
-                  <strong>Rejection Log</strong>
-                  {rejectionLogs.map((log) => (
-                    <p key={log.id} className="lead">
-                      {dateLabel(log.createdAt)}: {log.comment ?? "Rejected"} ({log.actor?.name ?? log.actorRole ?? "Admin"})
-                    </p>
-                  ))}
-                </div>
-              ) : null}
+                  {rejectionLogs.length > 0 ? (
+                    <div className="audit-trail">
+                      <strong>Rejection Log</strong>
+                      {rejectionLogs.map((log) => (
+                        <p key={log.id} className="lead">
+                          {dateLabel(log.createdAt)}: {log.comment ?? "Rejected"} ({log.actor?.name ?? log.actorRole ?? "Admin"})
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
 
-              <div className="audit-trail">
-                <strong>Audit Trail</strong>
-                {(booking.bookingAuditLogs ?? []).length === 0 ? (
-                  <p className="lead">No audit entries yet.</p>
-                ) : (
-                  booking.bookingAuditLogs?.map((log) => (
-                    <p key={log.id} className="lead">
-                      {dateLabel(log.createdAt)} {log.action}: {log.comment ?? "No comment"} (
-                      {log.actor?.name ?? log.actorRole ?? "System"})
-                    </p>
-                  ))
-                )}
-              </div>
+                  <div className="audit-trail">
+                    <strong>Audit Trail</strong>
+                    {(booking.bookingAuditLogs ?? []).length === 0 ? (
+                      <p className="lead">No audit entries yet.</p>
+                    ) : (
+                      booking.bookingAuditLogs?.map((log) => (
+                        <p key={log.id} className="lead">
+                          {dateLabel(log.createdAt)} {log.action}: {log.comment ?? "No comment"} (
+                          {log.actor?.name ?? log.actorRole ?? "System"})
+                        </p>
+                      ))
+                    )}
+                  </div>
+                </>
+              ) : booking.status === "PENDING" ? (
+                <p className="notice warning">Tentative booking pending admin approval.</p>
+              ) : (
+                <p className="lead">Confirmed house booking.</p>
+              )}
 
               {adminMode ? (
                 <div className="grid">

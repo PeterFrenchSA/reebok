@@ -9,7 +9,12 @@ import {
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { calculateNights } from "@/lib/booking";
-import { buildManageBookingUrl, generateBookingManageToken, getAppBaseUrl } from "@/lib/booking-manage";
+import {
+  buildManageBookingUrl,
+  generateBookingManageToken,
+  getAppBaseUrl,
+  hashBookingManageToken
+} from "@/lib/booking-manage";
 import { renderEmailTemplate } from "@/lib/email-templates";
 import { calculateBookingFees } from "@/lib/fees";
 import { getSessionUser } from "@/lib/auth";
@@ -111,6 +116,40 @@ async function getActiveFeeConfig(bookingStartDate: Date) {
   return { feeConfig, seasonalRates };
 }
 
+const adminBookingInclude = {
+  requestedBy: { select: { name: true, email: true } },
+  approvedBy: { select: { name: true, email: true, role: true } },
+  guests: true,
+  roomAllocations: {
+    include: { room: true }
+  },
+  bookingAuditLogs: {
+    include: {
+      actor: { select: { id: true, name: true, email: true, role: true } }
+    },
+    orderBy: { createdAt: "asc" as const }
+  }
+} as const;
+
+const ownBookingSelect = {
+  id: true,
+  source: true,
+  scope: true,
+  status: true,
+  startDate: true,
+  endDate: true,
+  nights: true,
+  totalGuests: true,
+  petCount: true,
+  currency: true,
+  totalAmount: true
+} as const;
+
+const memberSummarySelect = {
+  ...ownBookingSelect,
+  requestedById: true
+} as const;
+
 export async function GET(req: NextRequest) {
   const user = await getSessionUser(req);
   if (!user) {
@@ -125,10 +164,11 @@ export async function GET(req: NextRequest) {
   const mineOnly = req.nextUrl.searchParams.get("mineOnly") === "true";
 
   const isAdmin = hasPermission(user.role, "booking:manage") || hasPermission(user.role, "booking:approve");
+  const canSeeSharedActiveBookings = hasPermission(user.role, "booking:create:family");
 
   const where = isAdmin
     ? { status: statusFilter ?? undefined }
-    : mineOnly
+    : mineOnly || !canSeeSharedActiveBookings
       ? {
           requestedById: user.id,
           status: statusFilter ?? undefined
@@ -141,32 +181,52 @@ export async function GET(req: NextRequest) {
           status: statusFilter ?? undefined
         };
 
+  const safeTake = take > 0 && take <= 1000 ? take : 200;
+
+  if (isAdmin) {
+    const bookings = await prisma.booking.findMany({
+      where,
+      orderBy: { startDate: "desc" },
+      include: adminBookingInclude,
+      take: safeTake
+    });
+
+    const sanitizedBookings = bookings.map((booking) => {
+      const { manageToken: _manageToken, ...sanitizedBooking } = booking;
+      return sanitizedBooking;
+    });
+
+    return NextResponse.json({ bookings: sanitizedBookings });
+  }
+
+  if (mineOnly || !canSeeSharedActiveBookings) {
+    const bookings = await prisma.booking.findMany({
+      where,
+      orderBy: { startDate: "desc" },
+      select: ownBookingSelect,
+      take: safeTake
+    });
+
+    return NextResponse.json({ bookings });
+  }
+
   const bookings = await prisma.booking.findMany({
     where,
     orderBy: { startDate: "desc" },
-    include: {
-      requestedBy: { select: { name: true, email: true } },
-      approvedBy: { select: { name: true, email: true, role: true } },
-      guests: true,
-      roomAllocations: {
-        include: { room: true }
-      },
-      bookingAuditLogs: {
-        include: {
-          actor: { select: { id: true, name: true, email: true, role: true } }
-        },
-        orderBy: { createdAt: "asc" }
-      }
-    },
-    take: take > 0 && take <= 1000 ? take : 200
+    select: memberSummarySelect,
+    take: safeTake
   });
 
-  const sanitizedBookings = bookings.map((booking) => {
-    const { manageToken: _manageToken, ...sanitizedBooking } = booking;
-    return sanitizedBooking;
-  });
+  const summaryBookings = bookings.map(({ requestedById, ...booking }, index) =>
+    requestedById === user.id
+      ? booking
+      : {
+          ...booking,
+          id: `house-booking-${index + 1}`
+        }
+  );
 
-  return NextResponse.json({ bookings: sanitizedBookings });
+  return NextResponse.json({ bookings: summaryBookings });
 }
 
 export async function POST(req: NextRequest) {
@@ -253,7 +313,8 @@ export async function POST(req: NextRequest) {
       seasonalRates
     );
 
-    const manageToken = generateBookingManageToken();
+    const rawManageToken = generateBookingManageToken();
+    const manageToken = hashBookingManageToken(rawManageToken);
 
     const booking = await prisma.booking.create({
       data: {
@@ -322,7 +383,7 @@ export async function POST(req: NextRequest) {
     });
 
     const requesterEmail = booking.requestedBy?.email ?? booking.externalLeadEmail;
-    const manageUrl = buildManageBookingUrl(booking.id, booking.manageToken ?? undefined, requesterEmail ?? undefined);
+    const manageUrl = buildManageBookingUrl(booking.id, rawManageToken, requesterEmail ?? undefined);
     const commonTemplateContext = {
       BOOKING_REFERENCE: booking.id,
       START_DATE: asDateLabel(booking.startDate),
