@@ -382,7 +382,6 @@ export function AdminUserManager() {
               <option value="SHAREHOLDER">Administrator (SHAREHOLDER)</option>
               <option value="FAMILY_MEMBER">Member (FAMILY_MEMBER)</option>
               <option value="GUEST">Guest (GUEST)</option>
-              <option value="SUPER_ADMIN">Super Admin (SUPER_ADMIN)</option>
             </select>
           </div>
           <div className="field">
@@ -575,7 +574,7 @@ export function AdminUserManager() {
                     value={draft.role}
                     onChange={(event) => updateDraft(user.id, { role: event.target.value as UserRole })}
                   >
-                    <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                    {draft.role === "SUPER_ADMIN" ? <option value="SUPER_ADMIN">SUPER_ADMIN</option> : null}
                     <option value="SHAREHOLDER">SHAREHOLDER</option>
                     <option value="FAMILY_MEMBER">FAMILY_MEMBER</option>
                     <option value="GUEST">GUEST</option>

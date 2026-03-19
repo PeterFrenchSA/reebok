@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
@@ -5,10 +6,21 @@ import { prisma } from "@/lib/prisma";
 function isAuthorizedCron(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    return true;
+    return process.env.NODE_ENV !== "production";
   }
 
-  return req.headers.get("x-cron-secret") === secret;
+  const providedSecret = req.headers.get("x-cron-secret");
+  if (!providedSecret) {
+    return false;
+  }
+
+  const expected = Buffer.from(secret, "utf8");
+  const provided = Buffer.from(providedSecret, "utf8");
+  if (expected.length !== provided.length) {
+    return false;
+  }
+
+  return timingSafeEqual(expected, provided);
 }
 
 export async function POST(req: NextRequest) {

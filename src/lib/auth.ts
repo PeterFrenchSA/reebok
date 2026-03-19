@@ -13,13 +13,49 @@ export type SessionUser = {
 
 export const SESSION_COOKIE_NAME = "rbhm_session";
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
+const DEV_SESSION_SECRET = "change-this-in-production";
+const PLACEHOLDER_SESSION_SECRET = "change-this-to-a-long-random-string";
 
 function isValidRole(value: string | null): value is UserRole {
   return value === "SUPER_ADMIN" || value === "SHAREHOLDER" || value === "FAMILY_MEMBER" || value === "GUEST";
 }
 
+function isProductionEnvironment(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
+function allowDevAuthHeaders(): boolean {
+  return !isProductionEnvironment() && process.env.ALLOW_DEV_AUTH_HEADERS === "true";
+}
+
+function resolveDevUserOverride(): SessionUser | null {
+  if (isProductionEnvironment()) {
+    return null;
+  }
+
+  if (process.env.DEV_USER_ID && isValidRole(process.env.DEV_USER_ROLE ?? null)) {
+    return {
+      id: process.env.DEV_USER_ID,
+      role: process.env.DEV_USER_ROLE as UserRole,
+      email: process.env.SMTP_FROM,
+      name: "Dev User"
+    };
+  }
+
+  return null;
+}
+
 function getSessionSecret(): string {
-  return process.env.SESSION_SECRET ?? "change-this-in-production";
+  const secret = process.env.SESSION_SECRET;
+  if (secret && secret !== PLACEHOLDER_SESSION_SECRET) {
+    return secret;
+  }
+
+  if (isProductionEnvironment()) {
+    throw new Error("SESSION_SECRET must be set to a non-placeholder value in production.");
+  }
+
+  return secret ?? DEV_SESSION_SECRET;
 }
 
 function signSessionPayload(payload: string): string {
@@ -99,7 +135,7 @@ export async function getSessionUser(req: NextRequest): Promise<SessionUser | nu
   const headerEmail = req.headers.get("x-user-email") ?? undefined;
   const headerName = req.headers.get("x-user-name") ?? undefined;
 
-  if (headerId && isValidRole(headerRole)) {
+  if (allowDevAuthHeaders() && headerId && isValidRole(headerRole)) {
     return { id: headerId, role: headerRole, email: headerEmail, name: headerName };
   }
 
@@ -108,16 +144,7 @@ export async function getSessionUser(req: NextRequest): Promise<SessionUser | nu
     return cookieUser;
   }
 
-  if (process.env.DEV_USER_ID && isValidRole(process.env.DEV_USER_ROLE ?? null)) {
-    return {
-      id: process.env.DEV_USER_ID,
-      role: process.env.DEV_USER_ROLE as UserRole,
-      email: process.env.SMTP_FROM,
-      name: "Dev User"
-    };
-  }
-
-  return null;
+  return resolveDevUserOverride();
 }
 
 export async function getSessionUserFromCookies(): Promise<SessionUser | null> {
@@ -127,14 +154,5 @@ export async function getSessionUserFromCookies(): Promise<SessionUser | null> {
     return cookieUser;
   }
 
-  if (process.env.DEV_USER_ID && isValidRole(process.env.DEV_USER_ROLE ?? null)) {
-    return {
-      id: process.env.DEV_USER_ID,
-      role: process.env.DEV_USER_ROLE as UserRole,
-      email: process.env.SMTP_FROM,
-      name: "Dev User"
-    };
-  }
-
-  return null;
+  return resolveDevUserOverride();
 }

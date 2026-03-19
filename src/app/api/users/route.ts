@@ -36,6 +36,10 @@ const updateUserSchema = z
     }
   });
 
+function canManageSuperAdmin(actorRole: UserRole): boolean {
+  return actorRole === "SUPER_ADMIN";
+}
+
 export async function GET(req: NextRequest) {
   const user = await getSessionUser(req);
   if (!user || !hasPermission(user.role, "booking:manage")) {
@@ -70,6 +74,22 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const existing = await prisma.user.findUnique({
+    where: { id: parsed.data.userId },
+    select: { id: true, role: true }
+  });
+
+  if (!existing) {
+    return NextResponse.json({ error: "User not found." }, { status: 404 });
+  }
+
+  const requestedRole = parsed.data.role;
+  const touchesSuperAdmin =
+    existing.role === "SUPER_ADMIN" || requestedRole === "SUPER_ADMIN";
+  if (touchesSuperAdmin && !canManageSuperAdmin(user.role)) {
+    return NextResponse.json({ error: "Only super admins can manage super admin accounts." }, { status: 403 });
+  }
+
   const data: Prisma.UserUpdateInput = {};
 
   if (parsed.data.name !== undefined) {
@@ -93,15 +113,6 @@ export async function PATCH(req: NextRequest) {
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "No changes provided." }, { status: 400 });
-  }
-
-  const exists = await prisma.user.findUnique({
-    where: { id: parsed.data.userId },
-    select: { id: true }
-  });
-
-  if (!exists) {
-    return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
 
   const updated = await prisma.user.update({
@@ -137,6 +148,10 @@ export async function POST(req: NextRequest) {
   const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
   if (existing) {
     return NextResponse.json({ error: "User already exists." }, { status: 409 });
+  }
+
+  if (parsed.data.role === "SUPER_ADMIN" && !canManageSuperAdmin(user.role)) {
+    return NextResponse.json({ error: "Only super admins can create super admin accounts." }, { status: 403 });
   }
 
   const created = await prisma.$transaction(async (tx) => {

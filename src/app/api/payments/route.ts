@@ -6,6 +6,11 @@ import { buildSubscriptionCoverage } from "@/lib/fees";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 
+const documentUrlSchema = z
+  .string()
+  .max(2048)
+  .refine((value) => value.startsWith("/") || /^https?:\/\//.test(value), "Document URL must be absolute or root-relative.");
+
 const createPaymentSchema = z.object({
   bookingId: z.string().optional(),
   subscriptionUserId: z.string().optional(),
@@ -14,7 +19,7 @@ const createPaymentSchema = z.object({
   method: z.nativeEnum(PaymentMethod),
   status: z.nativeEnum(PaymentStatus).default(PaymentStatus.PENDING),
   reference: z.string().max(120).optional(),
-  proofFileUrl: z.string().url().optional(),
+  proofFileUrl: documentUrlSchema.optional(),
   paidAt: z.coerce.date().optional(),
   monthsCovered: z.number().int().positive().max(24).default(1),
   periodStart: z.coerce.date().optional(),
