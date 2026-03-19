@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getApproverEmails, sendMail } from "@/lib/mail";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { opaqueTokenCandidates } from "@/lib/tokens";
 
 const schema = z.object({
   token: z.string().min(10),
@@ -17,8 +18,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const invitation = await prisma.invitation.findUnique({
-    where: { token: parsed.data.token }
+  const tokenCandidates = opaqueTokenCandidates(parsed.data.token);
+  if (tokenCandidates.length === 0) {
+    return NextResponse.json({ error: "Invitation not found" }, { status: 404 });
+  }
+
+  const invitation = await prisma.invitation.findFirst({
+    where: {
+      OR: tokenCandidates.map((token) => ({ token }))
+    }
   });
 
   if (!invitation) {

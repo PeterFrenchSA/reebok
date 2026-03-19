@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
+import { generateOpaqueToken, hashOpaqueToken } from "@/lib/tokens";
 
 const reviewSchema = z.object({
   action: z.enum(["approve", "reject"]),
@@ -83,9 +84,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "Rejection reason is required." }, { status: 400 });
     }
 
+    const rawToken = generateOpaqueToken(16);
     const updated = await prisma.invitation.update({
       where: { id: invitation.id },
       data: {
+        token: hashOpaqueToken(rawToken),
         status: "REJECTED",
         reviewedAt: new Date(),
         reviewedById: user.id,
@@ -101,7 +104,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       text: [
         "Your invitation registration was reviewed and requires changes before approval.",
         `Reason: ${parsed.data.reason}`,
-        `You can resubmit registration using the same link: ${baseUrl}/accept-invite?token=${invitation.token}`
+        `You can resubmit registration using the same link: ${baseUrl}/accept-invite?token=${rawToken}`
       ].join("\n")
     });
 

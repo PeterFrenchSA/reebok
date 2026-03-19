@@ -4,16 +4,13 @@ import { getSessionUser } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
+import { generateOpaqueToken, hashOpaqueToken } from "@/lib/tokens";
 
 const createInvitationSchema = z.object({
   email: z.string().email(),
   role: z.enum(["SHAREHOLDER", "FAMILY_MEMBER", "GUEST"]).default("FAMILY_MEMBER"),
   expiresInDays: z.number().int().positive().max(90).default(14)
 });
-
-function makeToken(): string {
-  return crypto.randomUUID().replace(/-/g, "");
-}
 
 const invitationListSelect = {
   id: true,
@@ -64,14 +61,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "User already exists" }, { status: 409 });
   }
 
-  const token = makeToken();
+  const token = generateOpaqueToken(16);
   const expiresAt = new Date(Date.now() + parsed.data.expiresInDays * 24 * 60 * 60 * 1000);
 
   const invitation = await prisma.invitation.create({
     data: {
       email: inviteEmail,
       role: parsed.data.role,
-      token,
+      token: hashOpaqueToken(token),
       invitedById: user.id,
       expiresAt
     },
@@ -94,5 +91,11 @@ export async function POST(req: NextRequest) {
     ].join("\n")
   });
 
-  return NextResponse.json({ invitation }, { status: 201 });
+  return NextResponse.json(
+    {
+      invitation,
+      inviteUrl: process.env.NODE_ENV === "production" ? undefined : inviteUrl
+    },
+    { status: 201 }
+  );
 }
