@@ -196,8 +196,14 @@ sudo bash scripts/install-ubuntu-24.04.sh --skip-tls
 ## Authentication Note
 
 This iteration now includes simple credential login with an HTTP-only cookie session (`/api/auth/login`).
-Header-based fallback (`x-user-id`, `x-user-role`) still works for integration testing, but production should
-move to full invitation acceptance and hardened auth/session flows.
+Header-based fallback (`x-user-id`, `x-user-role`) is now development-only and must be explicitly enabled with
+`ALLOW_DEV_AUTH_HEADERS=true`. Production should rely on normal login/session flows with a strong `SESSION_SECRET`.
+
+## Security Notes
+
+- Set `SESSION_SECRET` to a strong non-placeholder value in production.
+- Set `CRON_SECRET` in production before calling `POST /api/jobs/subscription-reminders`.
+- Uploaded support files are intentionally limited to common document and image types because they are served from `public/uploads`.
 
 ## Payment Gateway Note
 
