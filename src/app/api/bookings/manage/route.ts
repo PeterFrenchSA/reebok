@@ -14,6 +14,7 @@ import { renderEmailTemplate } from "@/lib/email-templates";
 import { calculateBookingFees } from "@/lib/fees";
 import { getApproverEmails, sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 import { hasPermission } from "@/lib/rbac";
 
 const lookupSchema = z.object({
@@ -93,6 +94,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const rateLimit = checkRateLimit({
+    namespace: "bookings:manage:get",
+    key: rateLimitKey(req, parsed.data.reference),
+    limit: 60,
+    windowMs: 15 * 60 * 1000
+  });
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
+  }
+
   const access = await resolveAccess(req, parsed.data);
   if (!access) {
     return NextResponse.json({ error: "Booking not found or access denied" }, { status: 404 });
@@ -125,6 +136,16 @@ export async function PATCH(req: NextRequest) {
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const rateLimit = checkRateLimit({
+    namespace: "bookings:manage:patch",
+    key: rateLimitKey(req, parsed.data.reference),
+    limit: 30,
+    windowMs: 15 * 60 * 1000
+  });
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
   }
 
   const access = await resolveAccess(req, parsed.data);

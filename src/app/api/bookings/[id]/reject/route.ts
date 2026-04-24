@@ -19,6 +19,13 @@ const rejectSchema = z.object({
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+const requesterSelect = {
+  id: true,
+  name: true,
+  email: true,
+  role: true
+} as const;
+
 function asDateLabel(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
@@ -44,7 +51,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   const existing = await prisma.booking.findUnique({
     where: { id },
-    include: { requestedBy: true }
+    include: { requestedBy: { select: requesterSelect } }
   });
 
   if (!existing) {
@@ -60,7 +67,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
         approvedAt: new Date(),
         rejectionReason: parsed.data.reason
       },
-      include: { requestedBy: true }
+      include: { requestedBy: { select: requesterSelect } }
     }),
     prisma.bookingAuditLog.create({
       data: {

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 import { hasPermission } from "@/lib/rbac";
 
 const createFeedbackSchema = z.object({
@@ -55,6 +56,16 @@ export async function POST(req: NextRequest) {
 
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const rateLimit = checkRateLimit({
+    namespace: "feedback:create",
+    key: rateLimitKey(req, user?.id ?? parsed.data.email ?? "anonymous"),
+    limit: 20,
+    windowMs: 10 * 60 * 1000
+  });
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
   }
 
   if (

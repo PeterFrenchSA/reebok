@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
   const fileBase = `${entity}-${new Date().toISOString().slice(0, 10)}`;
 
   if (format === "xlsx") {
-    const buffer = toXlsxBuffer(rows, entity);
+    const buffer = await toXlsxBuffer(rows, entity);
     const body = Uint8Array.from(buffer).buffer;
     return new NextResponse(body, {
       status: 200,

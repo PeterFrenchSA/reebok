@@ -117,6 +117,11 @@ These are important and should be preserved unless there is a deliberate redesig
   - `src/app/api/invitations/[id]/review/route.ts`
   - `src/lib/tokens.ts`
 
+9. Request throttling
+- Keep public/auth/token-heavy routes rate limited.
+- The current limiter is process-local and suitable as a lightweight guard, not a distributed abuse-prevention layer.
+- See `src/lib/rate-limit.ts`.
+
 ## Local Development
 
 Typical commands:
@@ -199,7 +204,8 @@ Recommended smoke-test areas:
 
 These are known follow-up areas, not reasons to block normal feature work:
 
-- auth and token-based routes do not yet have rate limiting
+- Excel import/export uses `exceljs`; full `npm audit` currently reports low-severity transitive advisories in `fast-csv`/`tmp`
+- current rate limiting is in-memory and should be replaced with a shared store if the app runs across multiple instances
 - `next lint` is deprecated and should be migrated to ESLint CLI before Next 16
 - there is not yet a committed integration test suite for critical workflows
 

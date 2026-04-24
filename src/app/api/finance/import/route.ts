@@ -22,7 +22,12 @@ function parseDate(value: unknown): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function parseRows(payload: z.infer<typeof importSchema>): Array<Record<string, unknown>> {
+function parseNumber(value: unknown, fallback: number): number {
+  const numberValue = Number(value ?? fallback);
+  return Number.isFinite(numberValue) ? numberValue : fallback;
+}
+
+async function parseRows(payload: z.infer<typeof importSchema>): Promise<Array<Record<string, unknown>>> {
   if (payload.format === "csv") {
     return fromCsv(payload.data);
   }
@@ -44,10 +49,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const rows = parseRows(parsed.data);
+  const rows = await parseRows(parsed.data);
   if (rows.length === 0) {
     return NextResponse.json({ imported: 0 });
   }
+
+  let imported = 0;
 
   if (parsed.data.entity === "expenses") {
     for (const row of rows) {
@@ -63,7 +70,7 @@ export async function POST(req: NextRequest) {
           description: row.description ? String(row.description) : undefined,
           supplier: row.supplier ? String(row.supplier) : undefined,
           invoiceNumber: row.invoiceNumber ? String(row.invoiceNumber) : undefined,
-          amount: Number(row.amount ?? 0),
+          amount: parseNumber(row.amount, 0),
           currency: String(row.currency ?? "ZAR"),
           serviceDate: parseDate(row.serviceDate) ?? undefined,
           dueDate: parseDate(row.dueDate) ?? undefined,
@@ -71,6 +78,7 @@ export async function POST(req: NextRequest) {
           createdById: user.id
         }
       });
+      imported += 1;
     }
   }
 
@@ -104,18 +112,24 @@ export async function POST(req: NextRequest) {
           scope: safeScope,
           startDate,
           endDate,
-          nights: Number(row.nights ?? 1),
-          totalGuests: Number(row.totalGuests ?? 1),
+          nights: Math.max(1, Math.round(parseNumber(row.nights, 1))),
+          totalGuests: Math.max(1, Math.round(parseNumber(row.totalGuests, 1))),
           notes: row.notes ? String(row.notes) : undefined,
-          totalAmount: Number(row.totalAmount ?? 0),
+          totalAmount: parseNumber(row.totalAmount, 0),
           currency: String(row.currency ?? "ZAR")
         }
       });
+      imported += 1;
     }
   }
 
   if (parsed.data.entity === "payments") {
     for (const row of rows) {
+      const amount = parseNumber(row.amount, 0);
+      if (amount <= 0) {
+        continue;
+      }
+
       const method = String(row.method ?? "MANUAL_PROOF");
       const status = String(row.status ?? "PENDING");
 
@@ -128,7 +142,7 @@ export async function POST(req: NextRequest) {
 
       await prisma.payment.create({
         data: {
-          amount: Number(row.amount ?? 0),
+          amount,
           currency: String(row.currency ?? "ZAR"),
           method: safeMethod,
           status: safeStatus,
@@ -138,6 +152,7 @@ export async function POST(req: NextRequest) {
           gatewayProvider: row.gatewayProvider ? String(row.gatewayProvider) : undefined
         }
       });
+      imported += 1;
     }
   }
 
@@ -160,23 +175,24 @@ export async function POST(req: NextRequest) {
       await prisma.subscription.upsert({
         where: { userId },
         update: {
-          monthlyAmount: Number(row.monthlyAmount ?? 100),
-          arrearsAmount: Number(row.arrearsAmount ?? 0),
+          monthlyAmount: Math.max(0, parseNumber(row.monthlyAmount, 100)),
+          arrearsAmount: Math.max(0, parseNumber(row.arrearsAmount, 0)),
           reminderEnabled: String(row.reminderEnabled ?? "true") !== "false",
           lastPaymentDate: parseDate(row.lastPaymentDate) ?? undefined,
           nextDueDate: parseDate(row.nextDueDate) ?? undefined
         },
         create: {
           userId,
-          monthlyAmount: Number(row.monthlyAmount ?? 100),
-          arrearsAmount: Number(row.arrearsAmount ?? 0),
+          monthlyAmount: Math.max(0, parseNumber(row.monthlyAmount, 100)),
+          arrearsAmount: Math.max(0, parseNumber(row.arrearsAmount, 0)),
           reminderEnabled: String(row.reminderEnabled ?? "true") !== "false",
           lastPaymentDate: parseDate(row.lastPaymentDate) ?? undefined,
           nextDueDate: parseDate(row.nextDueDate) ?? undefined
         }
       });
+      imported += 1;
     }
   }
 
-  return NextResponse.json({ imported: rows.length, entity: parsed.data.entity });
+  return NextResponse.json({ imported, skipped: rows.length - imported, entity: parsed.data.entity });
 }

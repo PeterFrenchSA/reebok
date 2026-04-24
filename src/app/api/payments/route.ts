@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { buildSubscriptionCoverage } from "@/lib/fees";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 import { hasPermission } from "@/lib/rbac";
 
 const documentUrlSchema = z
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
   }
 
   const data = parsed.data;
+  const canEditFinance = Boolean(user && hasPermission(user.role, "finance:edit"));
 
   if (!data.bookingId && !data.subscriptionUserId) {
     return NextResponse.json(
@@ -63,9 +65,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (data.subscriptionUserId && (!user || !hasPermission(user.role, "finance:edit"))) {
+  if (!canEditFinance) {
+    const rateLimit = checkRateLimit({
+      namespace: "payments:create",
+      key: rateLimitKey(req, data.bookingId ?? "unknown-booking"),
+      limit: 20,
+      windowMs: 15 * 60 * 1000
+    });
+    if (!rateLimit.ok) {
+      return rateLimitResponse(rateLimit);
+    }
+  }
+
+  if (data.subscriptionUserId && !canEditFinance) {
     return NextResponse.json(
       { error: "Only shareholders/super-admin can post subscription payments" },
+      { status: 403 }
+    );
+  }
+
+  if (
+    !canEditFinance &&
+    (data.status !== PaymentStatus.PENDING || data.paidAt || data.gatewayProvider || data.gatewayPayload !== undefined)
+  ) {
+    return NextResponse.json(
+      { error: "Only finance admins can confirm payments or submit gateway payment metadata." },
       { status: 403 }
     );
   }

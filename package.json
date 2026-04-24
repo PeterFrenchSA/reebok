@@ -12,14 +12,14 @@
     "prisma:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.1.0",
-    "next": "^15.0.3",
-    "nodemailer": "^6.9.16",
+    "@prisma/client": "^6.19.3",
+    "exceljs": "^3.4.0",
+    "next": "^15.5.15",
+    "nodemailer": "^8.0.6",
     "openai": "^5.2.0",
     "papaparse": "^5.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -29,8 +29,8 @@
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "eslint": "^9.16.0",
-    "eslint-config-next": "^15.0.3",
-    "prisma": "^6.1.0",
+    "eslint-config-next": "^15.5.15",
+    "prisma": "^6.19.3",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

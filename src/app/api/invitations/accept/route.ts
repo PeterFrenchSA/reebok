@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getApproverEmails, sendMail } from "@/lib/mail";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 import { opaqueTokenCandidates } from "@/lib/tokens";
 
 const schema = z.object({
@@ -16,6 +17,16 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const rateLimit = checkRateLimit({
+    namespace: "invitations:accept",
+    key: rateLimitKey(req, parsed.data.token.slice(0, 12)),
+    limit: 20,
+    windowMs: 15 * 60 * 1000
+  });
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
   }
 
   const tokenCandidates = opaqueTokenCandidates(parsed.data.token);

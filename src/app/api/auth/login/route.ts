@@ -4,6 +4,7 @@ import { z } from "zod";
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, createSessionToken } from "@/lib/auth";
 import { verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -29,6 +30,16 @@ export async function POST(req: NextRequest) {
   }
 
   const email = parsed.data.email.toLowerCase();
+  const rateLimit = checkRateLimit({
+    namespace: "auth:login",
+    key: rateLimitKey(req, email),
+    limit: 10,
+    windowMs: 15 * 60 * 1000
+  });
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
+  }
+
   const user = await prisma.user.findUnique({
     where: { email },
     select: {

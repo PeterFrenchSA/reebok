@@ -4,13 +4,16 @@
 
 - Workspace audited: `reebok-house-manager`
 - Working branch: `codex/reebok-audit-hardening`
-- Audit date: 2026-03-17
+- Initial audit date: 2026-03-17
+- Follow-up optimization review: 2026-04-24
 - Note: the audit applies to the Reebok House Manager application in this repository.
 
 ## Outcome
 
 - `npm run build`: passing
 - `npm run lint`: passing
+- `npm audit --audit-level=high`: passing
+- Full `npm audit`: three low-severity ExcelJS transitive advisories remain
 - Live smoke testing: passing for the main role, booking, finance, maintenance, decision, feedback, template, and invitation flows against a local build and temporary Postgres instance
 
 ## High-Impact Fixes Applied
@@ -78,6 +81,37 @@
   - `.eslintrc.json`
   - `package-lock.json`
 
+10. Lightweight request throttling
+- Added process-local rate limiting for login, booking creation, booking management, invitation acceptance, feedback, and non-admin payment submission.
+- This reduces brute-force/token guessing and public-form spam risk while preserving the existing route contracts.
+- Files:
+  - `src/lib/rate-limit.ts`
+  - `src/app/api/auth/login/route.ts`
+  - `src/app/api/bookings/route.ts`
+  - `src/app/api/bookings/manage/route.ts`
+  - `src/app/api/feedback/route.ts`
+  - `src/app/api/invitations/accept/route.ts`
+  - `src/app/api/payments/route.ts`
+
+11. Admin response and payment hardening
+- Prevented booking approval/rejection API responses from including full requester user records.
+- Restricted non-finance users from creating confirmed/gateway-enriched payment records.
+- Files:
+  - `src/app/api/bookings/[id]/approve/route.ts`
+  - `src/app/api/bookings/[id]/reject/route.ts`
+  - `src/app/api/payments/route.ts`
+
+12. Finance import and dependency cleanup
+- Made finance imports skip invalid payment amounts and report actual imported/skipped counts.
+- Aligned declared dependency versions with patched installed versions for Next.js, Prisma, and Nodemailer.
+- Replaced the high-severity `xlsx` dependency with an ExcelJS-backed workbook helper.
+- Files:
+  - `src/app/api/finance/import/route.ts`
+  - `src/app/api/finance/export/route.ts`
+  - `src/lib/xlsx.ts`
+  - `package.json`
+  - `package-lock.json`
+
 ## Live Feature Validation
 
 The following paths were validated against a built local app instance:
@@ -134,19 +168,24 @@ The following paths were validated against a built local app instance:
 
 ## Important Findings Still Worth Addressing
 
-1. Rate limiting
-- Login, booking-manage lookup, invitations, and feedback endpoints do not currently appear to have request throttling.
-- Recommendation: add per-IP and per-account rate limiting for auth and token-based flows.
+1. ExcelJS transitive low-severity advisories
+- Full `npm audit` reports low-severity advisories in ExcelJS transitive dependencies `fast-csv` and `tmp`.
+- The app only uses ExcelJS workbook read/write helpers, not its CSV/temp-file helpers, and the high-severity `xlsx` dependency was removed.
+- Recommendation: revisit when ExcelJS has a clean non-breaking upgrade path, or replace the XLSX helper with a narrower spreadsheet library.
 
-2. Public file exposure model
+2. Rate limiting persistence
+- The current limiter is process-local. It is useful for a single Node process, but not enough for multi-instance deployments.
+- Recommendation: move rate-limit counters to Redis/Postgres or enforce equivalent throttling at the reverse proxy/WAF layer if the app scales horizontally.
+
+3. Public file exposure model
 - Uploaded files are still served from a public path.
 - Current mitigation is file-type restriction, which is a good improvement, but private finance or maintenance documents may eventually need authenticated download routes instead of public URLs.
 
-3. `next lint` deprecation
+4. `next lint` deprecation
 - Lint passes today, but the script still uses deprecated `next lint`.
 - Recommendation: migrate to the ESLint CLI before upgrading to Next.js 16.
 
-4. Automated regression coverage
+5. Automated regression coverage
 - The repo does not yet have an automated integration test suite for role boundaries and key workflows.
 - Recommendation: add API-level integration tests for:
   - auth/session rules
@@ -164,6 +203,13 @@ The following paths were validated against a built local app instance:
 - `package-lock.json`
 - `src/app/api/bookings/manage/route.ts`
 - `src/app/api/bookings/route.ts`
+- `src/app/api/auth/login/route.ts`
+- `src/app/api/bookings/[id]/approve/route.ts`
+- `src/app/api/bookings/[id]/reject/route.ts`
+- `src/app/api/feedback/route.ts`
+- `src/app/api/finance/export/route.ts`
+- `src/app/api/finance/import/route.ts`
+- `src/app/api/invitations/accept/route.ts`
 - `src/app/api/jobs/subscription-reminders/route.ts`
 - `src/app/api/payments/route.ts`
 - `src/app/api/uploads/route.ts`
@@ -172,7 +218,9 @@ The following paths were validated against a built local app instance:
 - `src/components/AdminUserManager.tsx`
 - `src/lib/auth.ts`
 - `src/lib/booking-manage.ts`
+- `src/lib/rate-limit.ts`
 - `src/lib/tokens.ts`
+- `src/lib/xlsx.ts`
 
 ## Ready State
 

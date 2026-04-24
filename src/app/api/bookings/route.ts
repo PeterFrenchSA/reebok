@@ -20,6 +20,7 @@ import { calculateBookingFees } from "@/lib/fees";
 import { getSessionUser } from "@/lib/auth";
 import { getApproverEmails, sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 import { hasPermission } from "@/lib/rbac";
 
 const bookingGuestSchema = z.object({
@@ -256,6 +257,16 @@ export async function POST(req: NextRequest) {
           { status: 403 }
         );
       }
+    }
+
+    const bookingRateLimit = checkRateLimit({
+      namespace: "bookings:create",
+      key: rateLimitKey(req, user?.id ?? payload.externalLeadEmail ?? "anonymous"),
+      limit: source === BookingSource.EXTERNAL_PUBLIC ? 8 : 30,
+      windowMs: source === BookingSource.EXTERNAL_PUBLIC ? 60 * 60 * 1000 : 15 * 60 * 1000
+    });
+    if (!bookingRateLimit.ok) {
+      return rateLimitResponse(bookingRateLimit);
     }
 
     const startDate = payload.startDate;
