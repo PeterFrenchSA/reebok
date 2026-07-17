@@ -13,9 +13,9 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
-    "exceljs": "^3.4.0",
-    "next": "^15.5.15",
-    "nodemailer": "^8.0.6",
+    "exceljs": "^4.4.0",
+    "next": "^15.5.20",
+    "nodemailer": "^9.0.3",
     "openai": "^5.2.0",
     "papaparse": "^5.4.1",
     "react": "^19.0.0",
@@ -24,14 +24,14 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.1",
-    "@types/nodemailer": "^6.4.0",
+    "@types/nodemailer": "^8.0.1",
     "@types/papaparse": "^5.3.15",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "eslint": "^9.16.0",
-    "eslint-config-next": "^15.5.15",
+    "eslint-config-next": "^15.5.20",
     "prisma": "^6.19.3",
-    "tsx": "^4.19.2",
+    "tsx": "^4.23.1",
     "typescript": "^5.7.2"
   }
 }
