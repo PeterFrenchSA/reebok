@@ -32,6 +32,8 @@ export default async function MemberPage() {
           <Link href="/" className="btn-primary inline-action">
             Create New Booking
           </Link>
+          {" "}<Link href="/member/telegram" className="inline-action">Connect Telegram</Link>
+          {hasPermission(user.role, "finance:view") ? <>{" "}<Link href="/member/finances" className="inline-action">Financial Records</Link></> : null}
         </div>
       </article>
 

@@ -8,7 +8,7 @@ import { generateOpaqueToken, hashOpaqueToken } from "@/lib/tokens";
 
 const createInvitationSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["SHAREHOLDER", "FAMILY_MEMBER", "GUEST"]).default("FAMILY_MEMBER"),
+  role: z.enum(["ADMIN", "SHAREHOLDER", "FAMILY_MEMBER", "GUEST"]).default("FAMILY_MEMBER"),
   expiresInDays: z.number().int().positive().max(90).default(14)
 });
 

@@ -13,6 +13,7 @@ Primary domains in this repo:
 - decision voting
 - invitation and account administration
 - email template management
+- model-free Telegram availability and account linking
 
 ## Main Stack
 
@@ -41,13 +42,15 @@ Primary domains in this repo:
 Roles:
 
 - `SUPER_ADMIN`
+- `ADMIN`
 - `SHAREHOLDER`
 - `FAMILY_MEMBER`
 - `GUEST`
 
 Current intent:
 
-- `SUPER_ADMIN` and `SHAREHOLDER` are admin-capable roles
+- `SUPER_ADMIN` and explicitly appointed `ADMIN` accounts are admin-capable roles
+- `SHAREHOLDER` has member capabilities plus full read-only financial visibility and exports, not imports or editing
 - `FAMILY_MEMBER` has member capabilities
 - `GUEST` is restricted to guest-facing flows only
 
@@ -70,7 +73,7 @@ These are important and should be preserved unless there is a deliberate redesig
 
 3. Booking management access
 - Authenticated users may manage a booking only if they are the owner or have admin permission.
-- Email-only booking lookup is reserved for anonymous public flows.
+- Anonymous reference/email lookup requests an emailed private link; it must never authorize reading or editing by itself.
 - Booking manage tokens are stored hashed at rest; legacy plaintext tokens may still appear during rollout and should remain temporarily compatible.
 - Token checks must remain timing-safe.
 - See:
@@ -122,6 +125,14 @@ These are important and should be preserved unless there is a deliberate redesig
 - The current limiter is process-local and suitable as a lightweight guard, not a distributed abuse-prevention layer.
 - See `src/lib/rate-limit.ts`.
 
+10. Availability and Telegram
+- Pending and approved bookings both block their accommodation; room bookings may overlap only in different rooms.
+- All availability-changing writes must use `withBookingLock` and the shared reservation checks in `src/lib/availability.ts`, including imports.
+- Telegram is read-only availability, without an AI model or booking mutations.
+- Verify the webhook secret, link active member/admin accounts through hashed single-use tokens, and recheck permissions on each update and before protected delivery.
+- Approved groups offer a private-chat handoff, never shared booking details.
+- See `docs/TELEGRAM.md` for configuration and rollout requirements.
+
 ## Local Development
 
 Typical commands:
@@ -130,7 +141,7 @@ Typical commands:
 npm install
 npx prisma generate
 npx prisma db push
-npm run prisma:seed
+SEED_DEMO_USERS=true npm run prisma:seed
 npm run dev
 ```
 
@@ -163,6 +174,10 @@ Important env vars:
 - `SMTP_FROM`
 - `APPROVER_EMAILS`
 - `ALLOW_DEV_AUTH_HEADERS`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_BOT_USERNAME`
+- `TELEGRAM_WEBHOOK_SECRET`
+- `SEED_DEMO_USERS`
 
 Rules:
 
@@ -177,7 +192,9 @@ Local seed accounts are useful for smoke testing:
 - `admin@sandeney.co.za` / `admin1234`
 - `member@sandeney.co.za` / `member1234`
 
-Treat these as local-only defaults. Do not rely on them for production guidance.
+Treat these as local-only defaults. Demo accounts are created only with
+`SEED_DEMO_USERS=true` outside production mode; never enable this on a server.
+Existing seeded accounts are not removed by the guard and must have their passwords changed.
 
 ## Expected Verification Before Handoff
 
@@ -186,9 +203,13 @@ At minimum:
 ```bash
 npm run lint
 npm run build
+npm test
+npm run test:integration
 ```
 
 When touching access control, bookings, invitations, or finance flows, also verify the related HTTP routes or UI flows locally.
+Integration tests require Docker and use a disposable, loopback-only database;
+never substitute a real database. See `scripts/test-integration.sh`.
 
 Recommended smoke-test areas:
 
@@ -204,10 +225,10 @@ Recommended smoke-test areas:
 
 These are known follow-up areas, not reasons to block normal feature work:
 
-- Excel import/export uses `exceljs`; full `npm audit` currently reports low-severity transitive advisories in `fast-csv`/`tmp`
+- Dependency advisories and wider finance/maintenance/deployment findings remain documented in `docs/REVIEW-2026-09-20.md`; do not assume this Telegram change resolves them
 - current rate limiting is in-memory and should be replaced with a shared store if the app runs across multiple instances
 - `next lint` is deprecated and should be migrated to ESLint CLI before Next 16
-- there is not yet a committed integration test suite for critical workflows
+- automated tests cover the new booking/access/Telegram paths, not every legacy workflow or live external delivery
 
 ## Guidance For Future Agents
 

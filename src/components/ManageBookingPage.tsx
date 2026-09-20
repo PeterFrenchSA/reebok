@@ -91,6 +91,12 @@ export function ManageBookingPage({ initialReference = "", initialToken = "", in
       const data = (await response.json()) as { booking?: Booking; error?: unknown };
       if (!response.ok || !data.booking) {
         setBooking(null);
+        if (!token.trim() && email.trim()) {
+          const sent = await fetch("/api/bookings/manage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reference: reference.trim(), email: email.trim() }) });
+          const result = await sent.json();
+          setState({ type: sent.ok ? "success" : "error", message: result.message ?? result.error ?? "Could not email a management link." });
+          return;
+        }
         setState({ type: "error", message: errorMessage(data, "Could not load booking.") });
         return;
       }

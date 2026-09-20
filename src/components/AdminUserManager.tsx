@@ -49,7 +49,7 @@ type CreateUserForm = {
 
 type InviteForm = {
   email: string;
-  role: "SHAREHOLDER" | "FAMILY_MEMBER" | "GUEST";
+  role: "ADMIN" | "SHAREHOLDER" | "FAMILY_MEMBER" | "GUEST";
   expiresInDays: number;
 };
 
@@ -379,7 +379,8 @@ export function AdminUserManager() {
                 setCreateUserForm((current) => ({ ...current, role: event.target.value as UserRole }))
               }
             >
-              <option value="SHAREHOLDER">Administrator (SHAREHOLDER)</option>
+              <option value="ADMIN">Appointed Administrator</option>
+              <option value="SHAREHOLDER">Shareholder (read-only finances)</option>
               <option value="FAMILY_MEMBER">Member (FAMILY_MEMBER)</option>
               <option value="GUEST">Guest (GUEST)</option>
             </select>
@@ -444,7 +445,8 @@ export function AdminUserManager() {
                 }))
               }
             >
-              <option value="SHAREHOLDER">Administrator (SHAREHOLDER)</option>
+              <option value="ADMIN">Appointed Administrator</option>
+              <option value="SHAREHOLDER">Shareholder (read-only finances)</option>
               <option value="FAMILY_MEMBER">Member (FAMILY_MEMBER)</option>
               <option value="GUEST">Guest (GUEST)</option>
             </select>
@@ -575,6 +577,7 @@ export function AdminUserManager() {
                     onChange={(event) => updateDraft(user.id, { role: event.target.value as UserRole })}
                   >
                     {draft.role === "SUPER_ADMIN" ? <option value="SUPER_ADMIN">SUPER_ADMIN</option> : null}
+                    <option value="ADMIN">ADMIN</option>
                     <option value="SHAREHOLDER">SHAREHOLDER</option>
                     <option value="FAMILY_MEMBER">FAMILY_MEMBER</option>
                     <option value="GUEST">GUEST</option>

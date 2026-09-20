@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
   const feedback = await prisma.feedback.findMany({
     where: {
-      visibility:
+      visibility: !canViewInternal ? FeedbackVisibility.PUBLIC :
         visibilityFilter && Object.values(FeedbackVisibility).includes(visibilityFilter)
           ? visibilityFilter
           : canViewInternal
@@ -46,7 +46,10 @@ export async function GET(req: NextRequest) {
     take: 300
   });
 
-  return NextResponse.json({ feedback });
+  return NextResponse.json({ feedback: canViewInternal ? feedback : feedback.map((entry) => ({
+    id: entry.id, name: entry.name ?? entry.user?.name ?? "Guest", rating: entry.rating,
+    message: entry.message, createdAt: entry.createdAt, visibility: entry.visibility, isPublished: entry.isPublished
+  })) });
 }
 
 export async function POST(req: NextRequest) {
@@ -73,7 +76,7 @@ export async function POST(req: NextRequest) {
     (!user || !hasPermission(user.role, "feedback:internal"))
   ) {
     return NextResponse.json(
-      { error: "Only shareholders/super-admin can post internal feedback" },
+      { error: "Only appointed administrators can post internal feedback" },
       { status: 403 }
     );
   }
@@ -88,7 +91,7 @@ export async function POST(req: NextRequest) {
       message: parsed.data.message,
       visibility: parsed.data.visibility,
       isPublished:
-        parsed.data.visibility === FeedbackVisibility.PUBLIC
+        user && hasPermission(user.role, "feedback:internal") && parsed.data.visibility === FeedbackVisibility.PUBLIC
           ? parsed.data.isPublished ?? true
           : false
     }

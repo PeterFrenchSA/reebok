@@ -105,6 +105,8 @@ async function main() {
     skipDuplicates: true
   });
 
+  if (process.env.SEED_DEMO_USERS !== "true" || process.env.NODE_ENV === "production") return;
+
   const superAdmin = await ensureUserWithStarterPassword({
     email: SAMPLE_ADMIN.email,
     name: SAMPLE_ADMIN.name,

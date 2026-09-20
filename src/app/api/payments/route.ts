@@ -43,7 +43,10 @@ export async function GET(req: NextRequest) {
     }
   });
 
-  return NextResponse.json({ payments });
+  const visiblePayments = hasPermission(user.role, "finance:edit")
+    ? payments
+    : payments.map(({ gatewayPayload: _gatewayPayload, ...payment }) => payment);
+  return NextResponse.json({ payments: visiblePayments });
 }
 
 export async function POST(req: NextRequest) {
@@ -79,7 +82,7 @@ export async function POST(req: NextRequest) {
 
   if (data.subscriptionUserId && !canEditFinance) {
     return NextResponse.json(
-      { error: "Only shareholders/super-admin can post subscription payments" },
+      { error: "Only finance administrators can post subscription payments" },
       { status: 403 }
     );
   }

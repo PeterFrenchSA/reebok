@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     ? undefined
     : {
         OR: [
-          { submittedById: user.id },
+          { submittedById: user.id, status: { in: [DecisionStatus.PENDING_REVIEW, DecisionStatus.REJECTED] } },
           {
             status: { in: [DecisionStatus.ACTIVE, DecisionStatus.CLOSED] },
             audience: DecisionAudience.MEMBERS_AND_ADMINS
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
       launchedAt: decision.launchedAt,
       closesAt: decision.closesAt,
       closedAt: decision.closedAt,
-      reviewNotes: decision.reviewNotes,
+      reviewNotes: canReview ? decision.reviewNotes : null,
       createdAt: decision.createdAt,
       updatedAt: decision.updatedAt,
       currentUserVote,

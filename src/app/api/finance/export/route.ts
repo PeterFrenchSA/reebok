@@ -40,8 +40,8 @@ function sanitizeRows(rows: Array<Record<string, unknown>>): Array<Record<string
 
 export async function GET(req: NextRequest) {
   const user = await getSessionUser(req);
-  if (!user || !hasPermission(user.role, "finance:import-export")) {
-    return NextResponse.json({ error: "Finance import/export permission required" }, { status: 403 });
+  if (!user || !hasPermission(user.role, "finance:export")) {
+    return NextResponse.json({ error: "Finance export permission required" }, { status: 403 });
   }
 
   const entity = req.nextUrl.searchParams.get("entity") ?? "expenses";
@@ -52,9 +52,13 @@ export async function GET(req: NextRequest) {
   if (entity === "expenses") {
     rows = sanitizeRows(await prisma.expense.findMany({ orderBy: { createdAt: "desc" }, take: 5000 }));
   } else if (entity === "bookings") {
-    rows = sanitizeRows(await prisma.booking.findMany({ orderBy: { createdAt: "desc" }, take: 5000 }));
+    rows = sanitizeRows(await prisma.booking.findMany({ orderBy: { createdAt: "desc" }, take: 5000,
+      select: { id: true, source: true, scope: true, status: true, startDate: true, endDate: true, nights: true, totalGuests: true, currency: true, totalAmount: true }
+    }));
   } else if (entity === "payments") {
-    rows = sanitizeRows(await prisma.payment.findMany({ orderBy: { createdAt: "desc" }, take: 5000 }));
+    rows = sanitizeRows(await prisma.payment.findMany({ orderBy: { createdAt: "desc" }, take: 5000,
+      select: { id: true, bookingId: true, payerId: true, amount: true, currency: true, method: true, status: true, reference: true, proofFileUrl: true, paidAt: true, createdAt: true }
+    }));
   } else if (entity === "subscriptions") {
     rows = sanitizeRows(await prisma.subscription.findMany({ orderBy: { createdAt: "desc" }, take: 5000 }));
   } else {

@@ -1,3 +1,4 @@
+import { withBookingLock } from "@/lib/availability";
 import { BookingAuditAction, BookingStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -58,8 +59,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   }
 
-  const [booking] = await prisma.$transaction([
-    prisma.booking.update({
+  const booking = await withBookingLock(async (tx) => {
+    const result = await tx.booking.update({
       where: { id },
       data: {
         status: BookingStatus.REJECTED,
@@ -68,8 +69,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
         rejectionReason: parsed.data.reason
       },
       include: { requestedBy: { select: requesterSelect } }
-    }),
-    prisma.bookingAuditLog.create({
+    });
+    await tx.bookingAuditLog.create({
       data: {
         bookingId: id,
         actorId: user.id,
@@ -77,8 +78,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
         action: BookingAuditAction.REJECTED,
         comment: parsed.data.reason
       }
-    })
-  ]);
+    });
+    return result;
+  });
 
   const requesterEmail = booking.requestedBy?.email ?? booking.externalLeadEmail;
   if (requesterEmail) {

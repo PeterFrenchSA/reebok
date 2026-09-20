@@ -13,7 +13,8 @@ const adminLinks: Array<{ href: Route; label: string }> = [
   { href: "/admin/feedback", label: "Guest Feedback" },
   { href: "/admin/finances", label: "Finances" },
   { href: "/admin/templates", label: "Email Templates" },
-  { href: "/admin/decisions", label: "Decisions" }
+  { href: "/admin/decisions", label: "Decisions" },
+  { href: "/admin/telegram", label: "Telegram" }
 ];
 
 function isActive(pathname: string, href: string): boolean {

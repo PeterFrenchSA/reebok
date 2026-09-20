@@ -1,18 +1,21 @@
-# Reebok House Manager (Iteration 1)
+# Reebok House Manager
 
 Next.js + PostgreSQL starter platform for managing Sandeney Pty Ltd's family beach house operations.
 
 ## What This Iteration Implements
 
 - Invite-only user model with roles:
-  - `SHAREHOLDER` (super-admin capabilities)
   - `SUPER_ADMIN`
-  - `FAMILY_MEMBER` (booking only)
+  - `ADMIN` (appointed administrators)
+  - `SHAREHOLDER` (member access plus read-only financial records and exports)
+  - `FAMILY_MEMBER` (bookings, maintenance requests and eligible votes)
   - `GUEST` (public booking only)
 - Mandatory approval flow for all bookings
 - Admin booking approvals panel in `/admin`
 - External bookings constrained to whole-house reservations
 - Family bookings support whole-house or optional room allocations
+- Pending and confirmed bookings hold the relevant rooms; conflicting writes are serialized
+- Telegram availability with secure account linking, room/date buttons and approved-group private-chat handoff (no AI model)
 - Fee engine reflecting your proposal defaults:
   - R100 monthly subscription
   - Member/dependent/guest/mere-family/external rate tiers
@@ -82,10 +85,32 @@ Next.js + PostgreSQL starter platform for managing Sandeney Pty Ltd's family bea
    npm run dev
    ```
 
-Sample seeded accounts (after `npm run prisma:seed`):
+Local-only sample accounts (opt in with `SEED_DEMO_USERS=true npm run prisma:seed`, never on production):
 
 - Admin: `admin@sandeney.co.za` / `admin1234`
 - Member: `member@sandeney.co.za` / `member1234`
+
+## Telegram And Role Rollout
+
+See [Telegram setup and deployment](docs/TELEGRAM.md). This change introduces an
+`ADMIN` role: shareholders no longer receive administrative permissions. Confirm a
+working super-admin account before updating the schema, then appoint administrators
+explicitly. Shareholders see financial records at `/member/finances`.
+
+The bot checks availability only. Live activation requires a BotFather token and
+the server's HTTPS webhook configuration. Bot booking and WhatsApp are later phases.
+
+## Automated Checks
+
+```bash
+npm test
+npm run lint
+npm run test:integration
+```
+
+The integration runner requires Docker, builds the app and uses an isolated test
+database. It never sends real Telegram messages or email. Wider review findings
+and remaining work are recorded in [the dated review](docs/REVIEW-2026-09-20.md).
 
 ## Ubuntu 24.04 VPS Deploy
 
@@ -110,6 +135,24 @@ Useful options:
 - `--db-user reebok_app`
 - `--db-password '<strong-password>'`
 - `--port 3000`
+
+### First Production Administrator
+
+Production seeding does not create sample logins. On a fresh installation only,
+create the first super-admin from the application directory with a unique email
+and a password of at least 16 characters. These prompts keep the password out of
+shell history; do not add the bootstrap variables permanently to the environment file.
+
+```bash
+read -rp 'Admin email: ' BOOTSTRAP_ADMIN_EMAIL
+read -rsp 'Admin password (16+ characters): ' BOOTSTRAP_ADMIN_PASSWORD; echo
+export BOOTSTRAP_ADMIN_EMAIL BOOTSTRAP_ADMIN_PASSWORD
+node --env-file=.env.production --import tsx scripts/create-admin.ts
+unset BOOTSTRAP_ADMIN_EMAIL BOOTSTRAP_ADMIN_PASSWORD
+```
+
+The script refuses to overwrite accounts or run when a working super-admin exists.
+Existing installations should use User Administration, not bootstrap or demo seeding.
 
 ## Zero-Downtime Updates (Ubuntu 24.04)
 
@@ -165,6 +208,10 @@ sudo bash scripts/install-ubuntu-24.04.sh --skip-tls
 ## Key API Endpoints
 
 - `POST /api/bookings`
+- `GET /api/v1/availability?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD` (member session required; repeat `roomId` for room selection)
+- `GET|POST|DELETE /api/telegram/link`
+- `GET|POST /api/admin/telegram`
+- `POST /api/telegram/webhook` (Telegram secret header required)
 - `POST /api/bookings/{id}/approve`
 - `POST /api/bookings/{id}/reject`
 - `POST /api/bookings/{id}/comment`

@@ -1,3 +1,5 @@
+import { guestBreakdownSchema } from "@/lib/booking-guests";
+import { assertReservation, BookingRuleError, dateOnly, dateValue, withBookingLock } from "@/lib/availability";
 import {
   BookingAuditAction,
   BookingScope,
@@ -37,33 +39,11 @@ const roomAllocationSchema = z.object({
   guestCount: z.number().int().positive().max(20)
 });
 
-const guestBreakdownSchema = z
-  .object({
-    member: z.number().int().nonnegative().default(0),
-    dependentWithMember: z.number().int().nonnegative().default(0),
-    dependentWithoutMember: z.number().int().nonnegative().default(0),
-    guestOfMember: z.number().int().nonnegative().default(0),
-    guestOfDependent: z.number().int().nonnegative().default(0),
-    mereFamily: z.number().int().nonnegative().default(0),
-    visitorAdult: z.number().int().nonnegative().default(0),
-    visitorChildUnder6: z.number().int().nonnegative().default(0)
-  })
-  .default({
-    member: 0,
-    dependentWithMember: 0,
-    dependentWithoutMember: 0,
-    guestOfMember: 0,
-    guestOfDependent: 0,
-    mereFamily: 0,
-    visitorAdult: 0,
-    visitorChildUnder6: 0
-  });
-
 const createBookingSchema = z.object({
   source: z.enum(["INTERNAL", "EXTERNAL_PUBLIC"]).optional(),
   scope: z.nativeEnum(BookingScope).optional(),
-  startDate: z.coerce.date(),
-  endDate: z.coerce.date(),
+  startDate: dateOnly.transform(dateValue),
+  endDate: dateOnly.transform(dateValue),
   petCount: z.number().int().nonnegative().max(20).default(0),
   notes: z.string().max(2000).optional(),
   externalLeadName: z.string().max(120).optional(),
@@ -168,7 +148,7 @@ export async function GET(req: NextRequest) {
   const canSeeSharedActiveBookings = hasPermission(user.role, "booking:create:family");
 
   const where = isAdmin
-    ? { status: statusFilter ?? undefined }
+    ? { status: statusFilter ?? undefined, requestedById: mineOnly ? user.id : undefined }
     : mineOnly || !canSeeSharedActiveBookings
       ? {
           requestedById: user.id,
@@ -246,14 +226,14 @@ export async function POST(req: NextRequest) {
       ? payload.source === "INTERNAL"
         ? BookingSource.INTERNAL
         : BookingSource.EXTERNAL_PUBLIC
-      : user && (user.role === "FAMILY_MEMBER" || user.role === "SHAREHOLDER" || user.role === "SUPER_ADMIN")
+      : user && hasPermission(user.role, "booking:create:family")
         ? BookingSource.INTERNAL
         : BookingSource.EXTERNAL_PUBLIC;
 
     if (source === BookingSource.INTERNAL) {
       if (!user || !hasPermission(user.role, "booking:create:family")) {
         return NextResponse.json(
-          { error: "Only family members, shareholders, or super admins can create internal bookings" },
+          { error: "Only members or appointed administrators can create internal bookings" },
           { status: 403 }
         );
       }
@@ -277,6 +257,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Booking must be at least one night" }, { status: 400 });
     }
 
+    const pricedGuests = Object.values(payload.guestBreakdown).reduce((sum, count) => sum + count, 0);
+    if (payload.guests?.length && payload.guests.length !== pricedGuests) return NextResponse.json({ error: "Guest list must match the pricing breakdown." }, { status: 400 });
+    const invalidCategories = source === BookingSource.EXTERNAL_PUBLIC
+      ? Object.entries(payload.guestBreakdown).some(([key, value]) => value > 0 && !["visitorAdult", "visitorChildUnder6"].includes(key))
+      : payload.guestBreakdown.visitorAdult > 0 || payload.guestBreakdown.visitorChildUnder6 > 0;
+    if (invalidCategories) return NextResponse.json({ error: "Guest categories do not match the booking type." }, { status: 400 });
     const totalGuests = sumGuests(payload);
     if (totalGuests <= 0) {
       return NextResponse.json({ error: "At least one guest is required" }, { status: 400 });
@@ -290,25 +276,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "External bookings can only reserve the whole house" },
         { status: 400 }
-      );
-    }
-
-    const overlap = await prisma.booking.findFirst({
-      where: {
-        status: { in: [BookingStatus.PENDING, BookingStatus.APPROVED] },
-        startDate: { lt: endDate },
-        endDate: { gt: startDate }
-      },
-      select: { id: true, status: true, startDate: true, endDate: true }
-    });
-
-    if (overlap) {
-      return NextResponse.json(
-        {
-          error: "Booking dates overlap with an existing pending or approved booking",
-          conflictingBooking: overlap
-        },
-        { status: 409 }
       );
     }
 
@@ -327,7 +294,9 @@ export async function POST(req: NextRequest) {
     const rawManageToken = generateBookingManageToken();
     const manageToken = hashBookingManageToken(rawManageToken);
 
-    const booking = await prisma.booking.create({
+    const booking = await withBookingLock(async (tx) => {
+      await assertReservation(tx, { startDate, endDate, scope, totalGuests, roomAllocations: payload.roomAllocations });
+      return tx.booking.create({
       data: {
         source,
         scope,
@@ -337,6 +306,7 @@ export async function POST(req: NextRequest) {
         nights,
         totalGuests,
         petCount: payload.petCount,
+        guestBreakdown: payload.guestBreakdown,
         notes: payload.notes,
         manageToken,
         requestedById: user?.id,
@@ -393,6 +363,8 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    });
+
     const requesterEmail = booking.requestedBy?.email ?? booking.externalLeadEmail;
     const manageUrl = buildManageBookingUrl(booking.id, rawManageToken, requesterEmail ?? undefined);
     const commonTemplateContext = {
@@ -437,6 +409,7 @@ export async function POST(req: NextRequest) {
       feeBreakdown
     });
   } catch (error) {
+    if (error instanceof BookingRuleError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error(error);
     return NextResponse.json({ error: "Failed to create booking" }, { status: 500 });
   }

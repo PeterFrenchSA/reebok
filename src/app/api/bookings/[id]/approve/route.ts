@@ -1,3 +1,4 @@
+import { assertReservation, BookingRuleError, withBookingLock } from "@/lib/availability";
 import { BookingAuditAction, BookingStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
@@ -51,8 +52,14 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ booking: sanitizeBooking(existing), message: "Booking already approved" });
   }
 
-  const [booking] = await prisma.$transaction([
-    prisma.booking.update({
+  let booking;
+  try {
+  booking = await withBookingLock(async (tx) => {
+    const current = await tx.booking.findUnique({ where: { id }, include: { roomAllocations: true } });
+    if (!current || current.status !== BookingStatus.PENDING) throw new BookingRuleError("Only pending bookings can be approved.", 409);
+    await assertReservation(tx, { ...current, roomAllocations: current.roomAllocations });
+    const booking = await tx.booking.update(
+    {
       where: { id },
       data: {
         status: BookingStatus.APPROVED,
@@ -61,8 +68,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
         rejectionReason: null
       },
       include: { requestedBy: { select: requesterSelect } }
-    }),
-    prisma.bookingAuditLog.create({
+    });
+    await tx.bookingAuditLog.create({
       data: {
         bookingId: id,
         actorId: user.id,
@@ -70,8 +77,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
         action: BookingAuditAction.APPROVED,
         comment: "Booking approved."
       }
-    })
-  ]);
+    });
+    return booking;
+  });
+  } catch (error) {
+    if (error instanceof BookingRuleError) return NextResponse.json({ error: error.message }, { status: error.status });
+    throw error;
+  }
 
   const requesterEmail = booking.requestedBy?.email ?? booking.externalLeadEmail;
   if (requesterEmail) {

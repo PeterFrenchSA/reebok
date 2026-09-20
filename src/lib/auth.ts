@@ -17,7 +17,7 @@ const DEV_SESSION_SECRET = "change-this-in-production";
 const PLACEHOLDER_SESSION_SECRET = "change-this-to-a-long-random-string";
 
 function isValidRole(value: string | null): value is UserRole {
-  return value === "SUPER_ADMIN" || value === "SHAREHOLDER" || value === "FAMILY_MEMBER" || value === "GUEST";
+  return value === "SUPER_ADMIN" || value === "ADMIN" || value === "SHAREHOLDER" || value === "FAMILY_MEMBER" || value === "GUEST";
 }
 
 function isProductionEnvironment(): boolean {

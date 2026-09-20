@@ -20,8 +20,8 @@ export default function LoginPage() {
     setNextPath(isAllowedNextPath(value) ? value : null);
   }, []);
 
-  const [email, setEmail] = useState<string>(SAMPLE_MEMBER.email);
-  const [password, setPassword] = useState<string>(SAMPLE_MEMBER.password);
+  const [email, setEmail] = useState<string>(process.env.NODE_ENV === "development" ? SAMPLE_MEMBER.email : "");
+  const [password, setPassword] = useState<string>(process.env.NODE_ENV === "development" ? SAMPLE_MEMBER.password : "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [state, setState] = useState<LoginState>({ type: "idle" });
 
@@ -95,7 +95,7 @@ export default function LoginPage() {
         {state.type === "error" ? <p className="notice error">{state.message}</p> : null}
       </article>
 
-      <article className="card grid">
+      {process.env.NODE_ENV === "development" ? <article className="card grid">
         <h2>Sample Users (Seeded)</h2>
         <p className="lead">
           These are starter credentials for now. You can change passwords from the `/admin` section.
@@ -110,7 +110,7 @@ export default function LoginPage() {
           <span>{SAMPLE_MEMBER.email}</span>
           <span>Password: {SAMPLE_MEMBER.password}</span>
         </div>
-      </article>
+      </article> : null}
     </section>
   );
 }

@@ -9,6 +9,7 @@ datasource db {
 
 enum UserRole {
   SUPER_ADMIN
+  ADMIN
   SHAREHOLDER
   FAMILY_MEMBER
   GUEST
@@ -174,8 +175,48 @@ model User {
   decisionsSubmitted   Decision[]         @relation("DecisionSubmittedBy")
   decisionsReviewed    Decision[]         @relation("DecisionReviewedBy")
   decisionVotes        DecisionVote[]
+  telegramLink         TelegramLink?
+  telegramPairing      TelegramPairing?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
+}
+
+model TelegramLink {
+  userId         String   @id
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  telegramUserId String   @unique
+  createdAt      DateTime @default(now())
+}
+
+model TelegramPairing {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+}
+
+model TelegramGroup {
+  chatId    String   @id
+  label     String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model TelegramConversation {
+  telegramUserId String   @id
+  state          Json
+  lastUpdateId   BigInt
+  expiresAt      DateTime
+}
+
+model TelegramUpdate {
+  id             BigInt   @id
+  telegramUserId String
+  responses      Json
+  delivered      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model ShareholderProfile {
@@ -234,6 +275,7 @@ model Booking {
   nights            Int
   totalGuests       Int
   petCount          Int                     @default(0)
+  guestBreakdown    Json?
   notes             String?
   manageToken       String?                 @unique
   requestedById     String?

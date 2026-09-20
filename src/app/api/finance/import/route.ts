@@ -1,3 +1,4 @@
+import { assertReservation, BookingRuleError, withBookingLock } from "@/lib/availability";
 import { BookingScope, BookingSource, BookingStatus, ExpenseCategory, PaymentMethod, PaymentStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -83,6 +84,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (parsed.data.entity === "bookings") {
+    try {
+    await withBookingLock(async (tx) => {
     for (const row of rows) {
       const source = String(row.source ?? "MANUAL_IMPORT");
       const status = String(row.status ?? "PENDING");
@@ -105,14 +108,18 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      await prisma.booking.create({
+      if (safeScope === BookingScope.ROOM_SPECIFIC) throw new BookingRuleError("Room bookings must be allocated through the booking workflow, not CSV import.");
+      if (endDate <= startDate) throw new BookingRuleError("Imported check-out must be after check-in.");
+      if ([BookingStatus.PENDING, BookingStatus.APPROVED].some((status) => status === safeStatus)) await assertReservation(tx, { startDate, endDate, scope: safeScope, totalGuests: Math.max(1, Math.round(parseNumber(row.totalGuests, 1))), allowHistorical: true });
+      await tx.booking.create({
         data: {
           source: safeSource,
           status: safeStatus,
           scope: safeScope,
           startDate,
           endDate,
-          nights: Math.max(1, Math.round(parseNumber(row.nights, 1))),
+          nights: Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000),
+          bookingAuditLogs: { create: { actorId: user.id, actorRole: user.role, action: "CREATED", comment: "Booking imported by a finance administrator." } },
           totalGuests: Math.max(1, Math.round(parseNumber(row.totalGuests, 1))),
           notes: row.notes ? String(row.notes) : undefined,
           totalAmount: parseNumber(row.totalAmount, 0),
@@ -120,6 +127,11 @@ export async function POST(req: NextRequest) {
         }
       });
       imported += 1;
+    }
+    });
+    } catch (error) {
+      if (error instanceof BookingRuleError) return NextResponse.json({ error: error.message }, { status: error.status });
+      throw error;
     }
   }
 

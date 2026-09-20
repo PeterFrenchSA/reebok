@@ -5,8 +5,8 @@ import {
   UserRole
 } from "@prisma/client";
 
-const ADMIN_ROLES: UserRole[] = ["SUPER_ADMIN", "SHAREHOLDER"];
-const MEMBERS_AND_ADMINS_ROLES: UserRole[] = ["SUPER_ADMIN", "SHAREHOLDER", "FAMILY_MEMBER"];
+const ADMIN_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN"];
+const MEMBERS_AND_ADMINS_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN", "SHAREHOLDER", "FAMILY_MEMBER"];
 
 export function eligibleRolesForAudience(audience: DecisionAudience): UserRole[] {
   return audience === DecisionAudience.ADMINS_ONLY ? ADMIN_ROLES : MEMBERS_AND_ADMINS_ROLES;

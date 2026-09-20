@@ -6,7 +6,7 @@ type User = {
   id: string;
   email: string;
   name: string;
-  role: "SUPER_ADMIN" | "SHAREHOLDER" | "FAMILY_MEMBER" | "GUEST";
+  role: "SUPER_ADMIN" | "ADMIN" | "SHAREHOLDER" | "FAMILY_MEMBER" | "GUEST";
   isActive: boolean;
 };
 

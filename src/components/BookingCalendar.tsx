@@ -62,6 +62,8 @@ const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDateChange }: Props) {
   const [bookings, setBookings] = useState<AvailabilityBooking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [horizon, setHorizon] = useState<string | null>(null);
+  const [propertyDate, setPropertyDate] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [selectionMode, setSelectionMode] = useState<SelectionMode>("start");
@@ -70,7 +72,7 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
 
-  const today = useMemo(() => startOfDay(new Date()), []);
+  const today = useMemo(() => propertyDate ? parseIsoDate(propertyDate) : startOfDay(new Date()), [propertyDate]);
   const firstVisibleAllowedMonth = useMemo(
     () => new Date(today.getFullYear(), today.getMonth(), 1),
     [today]
@@ -94,12 +96,14 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
       setLoadError(null);
       try {
         const response = await fetch("/api/bookings/availability", { cache: "no-store" });
-        const data = (await response.json()) as { bookings?: AvailabilityBooking[]; error?: unknown };
+        const data = (await response.json()) as { bookings?: AvailabilityBooking[]; error?: unknown; horizon?: string; today?: string };
         if (!response.ok) {
           setLoadError(typeof data.error === "string" ? data.error : "Could not load availability.");
           return;
         }
         setBookings(data.bookings ?? []);
+        setHorizon(data.horizon ?? null);
+        setPropertyDate(data.today ?? null);
       } catch (error) {
         console.error(error);
         setLoadError("Could not load availability.");
@@ -149,11 +153,11 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
   }
 
   function canSelectStart(day: Date): boolean {
-    return statusForNight(day) === "available";
+    return Boolean(horizon && toIsoDate(day) < horizon && statusForNight(day) === "available");
   }
 
   function canSelectEnd(day: Date): boolean {
-    if (!selectedStart || day <= selectedStart) {
+    if (!horizon || toIsoDate(day) > horizon || !selectedStart || day <= selectedStart || day > addDays(selectedStart, 90)) {
       return false;
     }
     return conflictInRange(selectedStart, day) === null;
@@ -222,7 +226,7 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
           >
             Previous
           </button>
-          <button type="button" className="btn-secondary" onClick={() => setVisibleMonth((current) => addMonths(current, 1))}>
+          <button type="button" className="btn-secondary" disabled={!horizon || toIsoDate(addMonths(visibleMonth, 1)) > horizon} onClick={() => setVisibleMonth((current) => addMonths(current, 1))}>
             Next
           </button>
           <button

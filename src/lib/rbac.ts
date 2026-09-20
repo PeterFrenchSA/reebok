@@ -8,6 +8,9 @@ export type AppPermission =
   | "finance:view"
   | "finance:edit"
   | "finance:import-export"
+  | "finance:export"
+  | "bot:use"
+  | "bot:manage"
   | "maintenance:view"
   | "maintenance:edit"
   | "assets:edit"
@@ -27,6 +30,9 @@ const permissionMap: Record<UserRole, Set<AppPermission>> = {
     "finance:view",
     "finance:edit",
     "finance:import-export",
+    "finance:export",
+    "bot:manage",
+    "bot:use",
     "maintenance:view",
     "maintenance:edit",
     "assets:edit",
@@ -37,7 +43,7 @@ const permissionMap: Record<UserRole, Set<AppPermission>> = {
     "feedback:public",
     "feedback:internal"
   ]),
-  SHAREHOLDER: new Set<AppPermission>([
+  ADMIN: new Set<AppPermission>([
     "booking:create:external",
     "booking:create:family",
     "booking:approve",
@@ -45,6 +51,9 @@ const permissionMap: Record<UserRole, Set<AppPermission>> = {
     "finance:view",
     "finance:edit",
     "finance:import-export",
+    "finance:export",
+    "bot:manage",
+    "bot:use",
     "maintenance:view",
     "maintenance:edit",
     "assets:edit",
@@ -55,7 +64,9 @@ const permissionMap: Record<UserRole, Set<AppPermission>> = {
     "feedback:public",
     "feedback:internal"
   ]),
+  SHAREHOLDER: new Set<AppPermission>(["booking:create:family", "finance:view", "finance:export", "maintenance:view", "maintenance:edit", "decision:submit", "decision:vote", "feedback:public", "bot:use"]),
   FAMILY_MEMBER: new Set<AppPermission>([
+    "bot:use",
     "booking:create:family",
     "maintenance:view",
     "maintenance:edit",

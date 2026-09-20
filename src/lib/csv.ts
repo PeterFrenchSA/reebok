@@ -1,7 +1,7 @@
 import Papa from "papaparse";
 
 export function toCsv(data: Array<Record<string, unknown>>): string {
-  return Papa.unparse(data);
+  return Papa.unparse(data, { escapeFormulae: true });
 }
 
 export function fromCsv(content: string): Array<Record<string, string>> {

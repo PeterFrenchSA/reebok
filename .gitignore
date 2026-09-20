@@ -1,9 +1,12 @@
 node_modules
 .next
+.playwright-mcp/
 out
 .env
 .env.local
+.env.production
 .env.*.local
+*.tsbuildinfo
 coverage
 .DS_Store
 *.log

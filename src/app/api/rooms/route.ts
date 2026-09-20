@@ -15,7 +15,7 @@ const roomSchema = z.object({
 
 export async function GET(req: NextRequest) {
   const user = await getSessionUser(req);
-  if (!user) {
+  if (!user || !hasPermission(user.role, "booking:create:family")) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 

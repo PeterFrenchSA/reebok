@@ -12,7 +12,7 @@ const loginSchema = z.object({
 });
 
 function roleRedirect(role: UserRole): "/admin" | "/member" | "/guest" {
-  if (role === "SUPER_ADMIN" || role === "SHAREHOLDER") {
+  if (role === "SUPER_ADMIN" || role === "ADMIN") {
     return "/admin";
   }
   if (role === "GUEST") {

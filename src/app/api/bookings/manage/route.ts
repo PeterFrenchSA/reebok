@@ -1,3 +1,5 @@
+import { guestBreakdownSchema } from "@/lib/booking-guests";
+import { assertReservation, BookingRuleError, dateOnly, dateValue, withBookingLock } from "@/lib/availability";
 import { BookingAuditAction, BookingSource, BookingStatus, Prisma, UserRole } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -24,8 +26,8 @@ const lookupSchema = z.object({
 });
 
 const updateSchema = lookupSchema.extend({
-  startDate: z.coerce.date(),
-  endDate: z.coerce.date(),
+  startDate: dateOnly.transform(dateValue),
+  endDate: dateOnly.transform(dateValue),
   totalGuests: z.number().int().positive().max(40),
   petCount: z.number().int().nonnegative().max(20).default(0),
   notes: z.string().max(2000).optional(),
@@ -65,15 +67,6 @@ async function resolveAccess(req: NextRequest, payload: z.infer<typeof lookupSch
 
   if (payload.token && tokensMatch(booking.manageToken, payload.token)) {
     return { booking, actorLabel: "Guest (magic link)" };
-  }
-
-  // Email-only lookup is reserved for unauthenticated public flows.
-  // Logged-in users must rely on ownership/admin access or the manage token.
-  if (!user && payload.email) {
-    const candidate = payload.email.toLowerCase();
-    if (booking.externalLeadEmail?.toLowerCase() === candidate || booking.requestedBy?.email?.toLowerCase() === candidate) {
-      return { booking, actorLabel: payload.email };
-    }
   }
 
   return null;
@@ -131,6 +124,22 @@ export async function GET(req: NextRequest) {
   });
 }
 
+export async function POST(req: NextRequest) {
+  const parsed = lookupSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success || !parsed.data.email) return NextResponse.json({ error: "Reference and email are required." }, { status: 400 });
+  const limit = checkRateLimit({ namespace: "bookings:manage:link", key: rateLimitKey(req), limit: 5, windowMs: 15 * 60000 });
+  if (!limit.ok) return rateLimitResponse(limit);
+  if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) return NextResponse.json({ error: "Email delivery is unavailable. Please contact an administrator." }, { status: 503 });
+  const booking = await prisma.booking.findUnique({ where: { id: parsed.data.reference }, include: { requestedBy: { select: { email: true } } } });
+  const email = parsed.data.email.toLowerCase();
+  if (booking && [booking.externalLeadEmail, booking.requestedBy?.email].some((address) => address?.toLowerCase() === email)) {
+    const token = generateBookingManageToken();
+    await prisma.booking.update({ where: { id: booking.id }, data: { manageToken: hashBookingManageToken(token) } });
+    await sendMail({ to: email, subject: "Manage your Reebok booking", text: `Open this private link to manage your booking:\n${buildManageBookingUrl(booking.id, token)}\nDo not share this link.` });
+  }
+  return NextResponse.json({ message: "If the reference and email match, a private management link has been emailed to you." });
+}
+
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
@@ -165,33 +174,24 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Booking must be at least one night." }, { status: 400 });
   }
 
-  const overlap = await prisma.booking.findFirst({
-    where: {
-      id: { not: existing.id },
-      status: { in: [BookingStatus.PENDING, BookingStatus.APPROVED] },
-      startDate: { lt: endDate },
-      endDate: { gt: startDate }
-    },
-    select: { id: true, startDate: true, endDate: true, status: true }
-  });
-
-  if (overlap) {
-    return NextResponse.json(
-      {
-        error: "Booking dates overlap with an existing pending or approved booking",
-        conflictingBooking: overlap
-      },
-      { status: 409 }
-    );
-  }
-
-  const requiresReapproval = existing.status !== BookingStatus.PENDING;
-  const updated = await prisma.$transaction(async (tx) => {
-    let totalAmount: Prisma.Decimal | number | string | null = existing.totalAmount;
+  let requiresReapproval = existing.status !== BookingStatus.PENDING;
+  let updated;
+  try {
+  updated = await withBookingLock(async (tx) => {
+    const current = await tx.booking.findUnique({ where: { id: existing.id }, include: { roomAllocations: true } });
+    if (!current || current.status === BookingStatus.CANCELLED) throw new BookingRuleError("Cancelled bookings cannot be edited.", 409);
+    await assertReservation(tx, { ...current, startDate, endDate, totalGuests: parsed.data.totalGuests });
+    requiresReapproval = current.status !== BookingStatus.PENDING;
+    let totalAmount: Prisma.Decimal | number | string | null = current.totalAmount;
     let feeSnapshot: Prisma.InputJsonValue | undefined =
-      existing.feeSnapshot === null ? undefined : (existing.feeSnapshot as Prisma.InputJsonValue);
+      current.feeSnapshot === null ? undefined : (current.feeSnapshot as Prisma.InputJsonValue);
 
-    if (existing.source === BookingSource.EXTERNAL_PUBLIC) {
+    const changedStay = current.startDate.getTime() !== startDate.getTime() || current.endDate.getTime() !== endDate.getTime() || current.totalGuests !== parsed.data.totalGuests;
+    const counts = guestBreakdownSchema.safeParse(current.guestBreakdown);
+    if (changedStay && (!counts.success || Object.values(counts.data).reduce((a, b) => a + b, 0) !== parsed.data.totalGuests)) {
+      throw new BookingRuleError("This change needs an updated guest-category breakdown. Please contact an administrator or submit a new request.");
+    }
+    if (changedStay && counts.success) {
       const feeConfig =
         (await tx.feeConfig.findFirst({
           where: {
@@ -205,19 +205,10 @@ export async function PATCH(req: NextRequest) {
       const seasonalRates = await tx.seasonalRate.findMany({ where: { feeConfigId: feeConfig.id, enabled: true } });
       const breakdown = calculateBookingFees(
         {
-          source: "EXTERNAL_PUBLIC",
+          source: current.source === BookingSource.EXTERNAL_PUBLIC ? "EXTERNAL_PUBLIC" : "INTERNAL",
           startDate,
           nights,
-          counts: {
-            member: 0,
-            dependentWithMember: 0,
-            dependentWithoutMember: 0,
-            guestOfMember: 0,
-            guestOfDependent: 0,
-            mereFamily: 0,
-            visitorAdult: parsed.data.totalGuests,
-            visitorChildUnder6: 0
-          }
+          counts: counts.data
         },
         feeConfig,
         seasonalRates
@@ -264,6 +255,11 @@ export async function PATCH(req: NextRequest) {
 
     return booking;
   });
+
+  } catch (error) {
+    if (error instanceof BookingRuleError) return NextResponse.json({ error: error.message }, { status: error.status });
+    throw error;
+  }
 
   const requesterEmail = updated.requestedBy?.email ?? updated.externalLeadEmail ?? parsed.data.email;
   const approverEmails = getApproverEmails();
