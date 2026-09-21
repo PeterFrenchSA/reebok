@@ -43,13 +43,27 @@ test("production HTTP and database integration (no external Telegram or SMTP req
     let ready = false;
     for (let i = 0; i < 60; i++) { if (server.exitCode !== null) throw Error(output); if (output.includes("Ready")) { await fetch(base + "/login"); ready = true; break; } await new Promise((r) => setTimeout(r, 250)); }
     assert.ok(ready, output);
+    await t.test("deployment health checks the database and identifies the running release", async () => {
+      const response = await api("/api/health");
+      assert.equal(response.status, 200);
+      assert.deepEqual(response.data, { ok: true, release: "isolated-integration-test" });
+      assert.match(response.headers.get("cache-control")!, /no-store/);
+    });
     await t.test("fresh installation creates an explicit administrator, never overwriting accounts", async () => {
-      const env = { ...process.env, BOOTSTRAP_ADMIN_EMAIL: "bootstrap@test.invalid", BOOTSTRAP_ADMIN_PASSWORD: "Strong-test-only-password-123" };
+      const env = { ...process.env, BOOTSTRAP_ADMIN_EMAIL: "bootstrap@test.invalid", BOOTSTRAP_ADMIN_NAME: "Fresh Administrator", BOOTSTRAP_ADMIN_PASSWORD: "Strong-test-only-password-123" };
       const run = () => spawnSync(process.execPath, ["--import", "tsx", "scripts/create-admin.ts"], { env, encoding: "utf8" });
       assert.equal(run().status, 0);
       const admin = await prisma.user.findUniqueOrThrow({ where: { email: env.BOOTSTRAP_ADMIN_EMAIL } });
       assert.equal(admin.role, "SUPER_ADMIN");
+      assert.equal(admin.name, "Fresh Administrator");
+      assert.equal(await prisma.user.count(), 1);
+      assert.equal(await prisma.booking.count(), 0);
+      assert.equal(await prisma.room.count(), 0);
+      assert.equal(await prisma.feeConfig.count(), 0);
       assert.notEqual(admin.passwordHash, env.BOOTSTRAP_ADMIN_PASSWORD);
+      const login = await api("/api/auth/login", undefined, { email: env.BOOTSTRAP_ADMIN_EMAIL, password: env.BOOTSTRAP_ADMIN_PASSWORD });
+      assert.equal(login.status, 200);
+      assert.equal((await api("/admin", login.headers.get("set-cookie")!.split(";")[0])).status, 200);
       assert.equal(run().status, 1);
       await prisma.user.delete({ where: { id: admin.id } });
     });

@@ -114,6 +114,29 @@ and remaining work are recorded in [the dated review](docs/REVIEW-2026-09-20.md)
 
 ## Ubuntu 24.04 VPS Deploy
 
+For the existing `reebok.williamson.co.za` server, use the new Mac-side
+[deployment and update guide](docs/DEPLOYMENT.md). It deploys clean committed
+releases over SSH. For the selected fresh start with an empty database, first
+commit the changes and replace the example administrator identity:
+
+```bash
+npm run deploy -- check-fresh
+npm run deploy -- fresh --admin-email you@example.com --admin-name "Your Name"
+npm run deploy -- deploy  # future updates keep the new installation's data
+```
+
+The fresh operation backs up and retains the old database for recovery. It does
+not wipe the server. If retaining existing records instead, use:
+
+```bash
+npm run deploy -- check
+npm run deploy -- deploy --schema push  # first reviewed schema upgrade
+npm run deploy -- deploy                # subsequent code-only updates
+```
+
+The commands below are the legacy fresh-OS installer, not the update path for a
+managed deployment. Do not reinstall the operating system or database to update code.
+
 Use the install script:
 
 ```bash
@@ -154,7 +177,11 @@ unset BOOTSTRAP_ADMIN_EMAIL BOOTSTRAP_ADMIN_PASSWORD
 The script refuses to overwrite accounts or run when a working super-admin exists.
 Existing installations should use User Administration, not bootstrap or demo seeding.
 
-## Zero-Downtime Updates (Ubuntu 24.04)
+## Legacy Updates (Ubuntu 24.04)
+
+For managed deployments, use `npm run deploy -- deploy` from your Mac instead.
+The new process has a brief maintenance window and does not claim zero downtime.
+The following older staging flow is retained only for pre-managed installations.
 
 Use the update script:
 
@@ -184,7 +211,10 @@ How it works:
 - Switches traffic back and removes temporary instance
 - Preserves uploaded support files in `public/uploads`
 
-## Cleanup and Reinstall (Ubuntu 24.04)
+## Legacy Cleanup and Reinstall (Ubuntu 24.04)
+
+Do not use this workflow for a managed deployment or the selected empty-database
+rollout. Use the backed-up `fresh` procedure in [the deployment guide](docs/DEPLOYMENT.md).
 
 If installation got into a bad state, run cleanup:
 

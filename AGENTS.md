@@ -205,6 +205,7 @@ npm run lint
 npm run build
 npm test
 npm run test:integration
+npm run test:deploy
 ```
 
 When touching access control, bookings, invitations, or finance flows, also verify the related HTTP routes or UI flows locally.
@@ -237,3 +238,13 @@ These are known follow-up areas, not reasons to block normal feature work:
 - Avoid exposing private booking/user detail to the wrong role even if the current UI does not render it.
 - If you add new uploaded file flows, reuse the existing root-relative document URL convention.
 - If you add new privileged actions, add or reuse explicit RBAC permissions instead of role-checking inline everywhere.
+
+## Deployment
+
+- `npm run deploy -- check` is a read-only SSH preflight for the existing Ubuntu host.
+- `check-fresh` is the read-only bootstrap preflight; explicitly approved `fresh` creates a separate empty database only after backing up the old installation. Never erase the old database or bypass the fresh-install identity checks.
+- Fresh bootstrap generates strong server-side session/cron secrets and one explicitly named super-admin; credentials stay in the protected backup, never in source or logs. Legacy data/storage remain isolated, including on future updates.
+- Deploy from a clean committed checkout using `npm run deploy -- deploy`; use an explicit schema mode for database changes.
+- The managed runner uses non-root app builds, protected backups, shared settings/uploads and a brief stopped-app maintenance window.
+- Application rollback never automatically restores the database. Never add forced schema reset/data-loss flags or overwrite secrets from a local environment file.
+- See `docs/DEPLOYMENT.md`; do not run the legacy installer/updater over managed releases.

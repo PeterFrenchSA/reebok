@@ -7,9 +7,11 @@ const prisma = new PrismaClient();
 async function main() {
   const parsed = z.object({
     email: z.string().trim().email().transform((value) => value.toLowerCase()),
+    name: z.string().trim().min(1).max(100),
     password: z.string().min(16).max(128)
   }).safeParse({
     email: process.env.BOOTSTRAP_ADMIN_EMAIL,
+    name: process.env.BOOTSTRAP_ADMIN_NAME ?? "Administrator",
     password: process.env.BOOTSTRAP_ADMIN_PASSWORD
   });
   if (!parsed.success) {
@@ -26,7 +28,7 @@ async function main() {
     if (await tx.user.findUnique({ where: { email: parsed.data.email }, select: { id: true } })) {
       throw new Error("That email already belongs to an account. Bootstrap will not overwrite it.");
     }
-    await tx.user.create({ data: { email: parsed.data.email, name: "Administrator", role: "SUPER_ADMIN", passwordHash } });
+    await tx.user.create({ data: { email: parsed.data.email, name: parsed.data.name, role: "SUPER_ADMIN", passwordHash } });
   });
   console.log("Initial super-admin created. Sign in and use User Administration to appoint other administrators.");
 }

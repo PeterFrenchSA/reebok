@@ -120,6 +120,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -f "/opt/reebok-house-manager-deploy/shared/.env.production" || -f "/etc/systemd/system/${SERVICE_NAME}.service.d/90-managed-release.conf" ]]; then
+  echo "This app uses managed releases. Run npm run deploy from your Mac; do not update the legacy checkout." >&2
+  exit 1
+fi
+
 if [[ "${APP_PORT}" == "${TEMP_PORT}" ]]; then
   echo "Error: --app-port and --temp-port must be different" >&2
   exit 1

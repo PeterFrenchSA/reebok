@@ -15,6 +15,7 @@ export TEST_DATABASE_URL="$DATABASE_URL"
 export SESSION_SECRET="isolated-telegram-integration-session-secret"
 export CRON_SECRET="isolated-telegram-integration-cron-secret"
 export APP_BASE_URL="http://127.0.0.1:3119"
+export APP_RELEASE="isolated-integration-test"
 export SMTP_HOST="" SMTP_PORT="" SMTP_USER="" SMTP_PASS="" APPROVER_EMAILS=""
 export ALLOW_DEV_AUTH_HEADERS=false
 export TELEGRAM_BOT_TOKEN="local-test-token-never-sent" TELEGRAM_BOT_USERNAME="reebok_test_bot"

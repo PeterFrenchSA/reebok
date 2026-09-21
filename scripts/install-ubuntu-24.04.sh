@@ -99,6 +99,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -f "/opt/reebok-house-manager-deploy/shared/.env.production" || -f "/etc/systemd/system/${SERVICE_NAME}.service.d/90-managed-release.conf" ]]; then
+  echo "This app uses managed releases. Run npm run deploy from your Mac; do not reinstall over the running service." >&2
+  exit 1
+fi
+
 if [[ ! -f "${APP_DIR}/package.json" ]]; then
   echo "Error: package.json not found in APP_DIR=${APP_DIR}" >&2
   exit 1
