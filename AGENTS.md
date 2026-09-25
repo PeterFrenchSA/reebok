@@ -241,6 +241,12 @@ These are known follow-up areas, not reasons to block normal feature work:
 
 ## Deployment
 
+- Current production uses Coolify on `headless.webxpoint0.com`, repository branch
+  `main`, and the root Dockerfile. Follow `docs/COOLIFY.md`; keep credentials in
+  Coolify runtime settings and preserve the PostgreSQL and uploads volumes.
+- The SSH deployment commands below target the older standalone installation.
+  Do not use them to update the current Coolify deployment.
+
 - `npm run deploy -- check` is a read-only SSH preflight for the existing Ubuntu host.
 - `check-fresh` is the read-only bootstrap preflight; explicitly approved `fresh` creates a separate empty database only after backing up the old installation. Never erase the old database or bypass the fresh-install identity checks.
 - Fresh bootstrap generates strong server-side session/cron secrets and one explicitly named super-admin; credentials stay in the protected backup, never in source or logs. Legacy data/storage remain isolated, including on future updates.

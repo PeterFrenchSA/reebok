@@ -1,0 +1,15 @@
+.git
+.next
+node_modules
+.env
+.env.*
+!.env.example
+public/uploads
+coverage
+outputs
+backups
+*.log
+*.tar
+*.tar.gz
+.DS_Store
+*.tsbuildinfo

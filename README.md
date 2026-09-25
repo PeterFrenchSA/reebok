@@ -114,6 +114,11 @@ and remaining work are recorded in [the dated review](docs/REVIEW-2026-09-20.md)
 
 ## Ubuntu 24.04 VPS Deploy
 
+The current fresh production deployment uses **Coolify on the shared VPS**.
+See [Coolify deployment](docs/COOLIFY.md) for the Dockerfile, new database,
+persistent uploads and `main` branch workflow. The standalone-server commands
+below are retained for the older installation and should not be used for Coolify.
+
 For the existing `reebok.williamson.co.za` server, use the new Mac-side
 [deployment and update guide](docs/DEPLOYMENT.md). It deploys clean committed
 releases over SSH. For the selected fresh start with an empty database, first
