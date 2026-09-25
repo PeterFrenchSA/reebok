@@ -28,9 +28,9 @@ run schema changes, seed users or reset data.
 
 Keep the new app protected until the database and administrator are ready. Confirm
 the database identity and that it is empty before running `prisma db push` from
-the app container. Never use reset or data-loss acceptance flags. Run
-`npm run prisma:seed` in production mode to initialize baseline room/fee settings;
-this does not create demo users or historical records.
+the app container. Never use reset or data-loss acceptance flags. This clean
+installation does not run the seed script: no sample rooms, rates, users or
+historical records are inserted. Configure the property through the admin portal.
 
 Create the explicitly named administrator using `scripts/create-admin.ts`, passing
 the `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_NAME`, and a generated
