@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
+import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import path from "node:path";
+import os from "node:os";
 import test from "node:test";
 import { prisma } from "../src/lib/prisma";
 import { hashPassword } from "../src/lib/password";
@@ -74,6 +77,31 @@ test("production HTTP and database integration (no external Telegram or SMTP req
       assert.equal(login.status, 200); cookies[user.role] = login.headers.get("set-cookie")!.split(";")[0];
     }
     const member = users.find((u) => u.role === "FAMILY_MEMBER")!;
+    await t.test("new uploads are immediately readable and cannot follow links outside storage", async () => {
+      const content = "Temporary upload integration check";
+      const form = new FormData();
+      form.set("file", new File([content], "storage-check.txt", { type: "text/plain" }));
+      const upload = await fetch(base + "/api/uploads", { method: "POST", headers: { cookie: cookies.SUPER_ADMIN }, body: form });
+      assert.equal(upload.status, 200);
+      const { url } = await upload.json() as { url: string };
+      assert.match(url, /^\/uploads\/[\d-]+\/[A-Za-z0-9._-]+$/);
+      const uploadedPath = path.join(process.cwd(), "public", url);
+      const outside = await mkdtemp(path.join(os.tmpdir(), "reebok-upload-test-"));
+      const link = uploadedPath.replace(/\.txt$/, "-link.txt");
+      try {
+        const download = await fetch(base + url);
+        assert.equal(download.status, 200);
+        assert.equal(await download.text(), content);
+        assert.equal(download.headers.get("x-content-type-options"), "nosniff");
+        await writeFile(path.join(outside, "outside.txt"), "must not be exposed");
+        await symlink(path.join(outside, "outside.txt"), link);
+        assert.equal((await fetch(base + url.replace(/\.txt$/, "-link.txt"))).status, 404);
+      } finally {
+        await rm(uploadedPath, { force: true });
+        await rm(link, { force: true });
+        await rm(outside, { recursive: true, force: true });
+      }
+    });
     const roomA = await prisma.room.create({ data: { name: "Room A", code: "A", capacity: 2 } });
     const roomB = await prisma.room.create({ data: { name: "Room B", code: "B", capacity: 2 } });
     await prisma.feeConfig.create({ data: {} });
