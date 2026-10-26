@@ -19,10 +19,12 @@ export type AppPermission =
   | "decision:vote"
   | "decision:review"
   | "feedback:public"
-  | "feedback:internal";
+  | "feedback:internal"
+  | "app-feedback:manage";
 
 const permissionMap: Record<UserRole, Set<AppPermission>> = {
   SUPER_ADMIN: new Set<AppPermission>([
+    "app-feedback:manage",
     "booking:create:external",
     "booking:create:family",
     "booking:approve",
@@ -44,6 +46,7 @@ const permissionMap: Record<UserRole, Set<AppPermission>> = {
     "feedback:internal"
   ]),
   ADMIN: new Set<AppPermission>([
+    "app-feedback:manage",
     "booking:create:external",
     "booking:create:family",
     "booking:approve",

@@ -112,17 +112,25 @@ The integration runner requires Docker, builds the app and uses an isolated test
 database. It never sends real Telegram messages or email. Wider review findings
 and remaining work are recorded in [the dated review](docs/REVIEW-2026-09-20.md).
 
-## Ubuntu 24.04 VPS Deploy
+## Current Deployment: Coolify
 
-The current fresh production deployment uses **Coolify on the shared VPS**.
-See [Coolify deployment](docs/COOLIFY.md) for the Dockerfile, new database,
-persistent uploads and `main` branch workflow. The standalone-server commands
-below are retained for the older installation and should not be used for Coolify.
+The app is already deployed through **[Coolify at apps.virdict.com](https://apps.virdict.com)**,
+not the old standalone `reebok.williamson.co.za` installation. See
+[Coolify deployment](docs/COOLIFY.md) for the Dockerfile, persistent database/uploads
+and `main` branch update workflow. Preserve existing data when updating.
 
-For the existing `reebok.williamson.co.za` server, use the new Mac-side
-[deployment and update guide](docs/DEPLOYMENT.md). It deploys clean committed
-releases over SSH. For the selected fresh start with an empty database, first
-commit the changes and replace the example administrator identity:
+Confirm the application's public URL in its Coolify resource. Do not assume the
+Coolify management address is also the app's `APP_BASE_URL`.
+On 2026-10-26 the Coolify API confirmed the public URL remains
+`https://reebok.williamson.co.za`; it now serves the Coolify-managed application.
+
+## Legacy Standalone Deployment
+
+The following commands and [SSH deployment guide](docs/DEPLOYMENT.md) are retained
+only for the retired standalone setup. **Do not use them to update or reinstall
+the current application.** They target the old server, not Coolify.
+
+Historical fresh-install workflow:
 
 ```bash
 npm run deploy -- check-fresh

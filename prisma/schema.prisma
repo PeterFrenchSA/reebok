@@ -177,8 +177,54 @@ model User {
   decisionVotes        DecisionVote[]
   telegramLink         TelegramLink?
   telegramPairing      TelegramPairing?
+  appFeedbackThreads   AppFeedbackThread[]
+  appFeedbackEntries   AppFeedbackEntry[]
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
+}
+
+enum AppFeedbackCategory {
+  PROBLEM
+  SUGGESTION
+  COMMENT
+}
+
+enum AppFeedbackStatus {
+  NEW
+  UNDER_REVIEW
+  PLANNED
+  RESOLVED
+}
+
+model AppFeedbackThread {
+  id        String              @id @default(cuid())
+  title     String              @db.VarChar(160)
+  body      String              @db.VarChar(4000)
+  category  AppFeedbackCategory
+  status    AppFeedbackStatus   @default(NEW)
+  version   Int                 @default(0)
+  authorId  String?
+  author    User?               @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  entries   AppFeedbackEntry[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([status, updatedAt])
+  @@index([updatedAt, id])
+}
+
+model AppFeedbackEntry {
+  id         String             @id @default(cuid())
+  threadId   String
+  thread     AppFeedbackThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  authorId   String?
+  author     User?              @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  body       String?            @db.VarChar(2000)
+  fromStatus AppFeedbackStatus?
+  toStatus   AppFeedbackStatus?
+  createdAt  DateTime           @default(now())
+
+  @@index([threadId, createdAt, id])
 }
 
 model TelegramLink {

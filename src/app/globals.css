@@ -163,7 +163,8 @@ a {
   background: #f9f6ee;
 }
 
-.admin-nav-link-active {
+.admin-nav-link-active,
+.admin-nav-link-active:hover {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
@@ -687,7 +688,39 @@ button {
   color: #7b3030;
 }
 
+.feedback-compose summary { cursor: pointer; font-weight: 700; padding: 0.3rem 0; }
+.feedback-compose form { margin-top: 1rem; }
+.feedback-list { display: grid; gap: 0.7rem; }
+.feedback-list-item { display: grid; gap: 0.45rem; width: 100%; text-align: left; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 0.7rem; padding: 1rem; cursor: pointer; font: inherit; overflow-wrap: anywhere; }
+.feedback-list-item:hover, .feedback-selected { background: #edf7f1; border-color: var(--accent); }
+.feedback-list-heading { display: flex; gap: 0.7rem; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.feedback-badge { border-radius: 2rem; padding: 0.2rem 0.6rem; background: #eceee8; color: #384237; font-size: 0.78rem; white-space: nowrap; }
+.feedback-planned { background: #e4eef9; color: #234e70; }
+.feedback-under_review { background: #fff0cc; color: #70500e; }
+.feedback-resolved { background: #d7efe8; color: #15513f; }
+.feedback-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.feedback-history { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.8rem; }
+.feedback-history li { padding: 0.8rem 1rem; border-left: 3px solid var(--border); background: #f7f8f4; border-radius: 0 0.6rem 0.6rem 0; }
+.feedback-discussion, .feedback-discussion h2, .user-guide [id], .user-guide h1 { scroll-margin-top: 7rem; }
+.feedback-discussion h2 { overflow-wrap: anywhere; }
+.feedback-discussion h2:focus-visible, .feedback-list-item:focus-visible, .guide-toc a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.guide-hero { background: linear-gradient(125deg, #0b4c3c, #13694f); color: #fff; }
+.guide-hero .kicker { justify-self: start; }
+.guide-hero .inline-action { min-height: 44px; padding: 0.65rem 0.95rem; border-radius: 0.7rem; font-weight: 600; }
+.guide-hero .inline-action:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.guide-hero p { line-height: 1.6; margin: 0; }
+.guide-meta { color: #dbebe2; font-size: 0.9rem; }
+.guide-toc { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; }
+.guide-toc a { border: 1px solid var(--border); border-radius: 0.6rem; padding: 0.75rem; line-height: 1.4; background: #f7f8f4; }
+.guide-toc a:hover { border-color: var(--accent); background: var(--accent-soft); }
+.guide-steps { padding-left: 1.5rem; margin: 0; display: grid; gap: 0.8rem; line-height: 1.65; }
+.guide-steps li { padding-left: 0.3rem; }
+.guide-steps li::marker { color: var(--accent); font-weight: 700; }
+.guide-back { color: var(--accent); text-decoration: underline; font-size: 0.9rem; }
+
 @media (max-width: 860px) {
+  .guide-toc { grid-template-columns: 1fr; }
+  .feedback-discussion, .feedback-discussion h2, .user-guide [id], .user-guide h1 { scroll-margin-top: 18rem; }
   .admin-shell {
     grid-template-columns: 1fr;
   }

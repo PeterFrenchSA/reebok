@@ -77,6 +77,100 @@ test("production HTTP and database integration (no external Telegram or SMTP req
       assert.equal(login.status, 200); cookies[user.role] = login.headers.get("set-cookie")!.split(";")[0];
     }
     const member = users.find((u) => u.role === "FAMILY_MEMBER")!;
+    await t.test("admin guide and app feedback stay private, with retained replies and conflict-safe status history", async () => {
+      const endpoint = "/api/admin/app-feedback";
+      const draft = { title: "Private admin-only suggestion", body: "A private tool suggestion, not a public guest review.", category: "SUGGESTION" };
+      const created = await api(endpoint, cookies.ADMIN, draft);
+      assert.equal(created.status, 201);
+      assert.equal(created.data.item.status, "NEW");
+      assert.equal(created.data.item.author.name, "ADMIN");
+      assert.equal(JSON.stringify(created.data).includes("passwordHash"), false);
+      assert.equal(JSON.stringify(created.data).includes("admin@test.invalid"), false);
+      const id = created.data.item.id;
+      const detail = `${endpoint}/${id}`;
+      for (const role of [undefined, "GUEST", "FAMILY_MEMBER", "SHAREHOLDER"]) {
+        const cookie = role ? cookies[role] : undefined;
+        const denied = role ? 403 : 401;
+        for (const [url, body, method] of [
+          [endpoint, undefined, "GET"], [endpoint, draft, "POST"], [detail, undefined, "GET"],
+          [detail, { body: "Cannot post" }, "POST"], [detail, { status: "RESOLVED", version: 0 }, "PATCH"]
+        ] as const) {
+          const response = await api(url, cookie, body, method);
+          assert.equal(response.status, denied);
+          assert.equal(JSON.stringify(response.data).includes(draft.title), false);
+          assert.match(response.headers.get("cache-control")!, /no-store/);
+        }
+        assert.equal((await api("/admin/guide", cookie)).status, 307);
+        assert.equal((await api("/admin/app-feedback", cookie)).status, 307);
+      }
+      for (const role of ["ADMIN", "SUPER_ADMIN"]) {
+        assert.equal((await api("/admin/guide", cookies[role])).status, 200);
+        assert.equal((await api("/admin/app-feedback", cookies[role])).status, 200);
+        assert.equal((await api(detail, cookies[role])).status, 200);
+      }
+      assert.equal(JSON.stringify((await api("/api/feedback")).data).includes(draft.body), false);
+      const guide = await api("/admin/guide", cookies.ADMIN);
+      assert.match(guide.data, /whole-house/);
+      const pdf = await fetch(base + "/docs/reebok-family-overview.pdf");
+      assert.equal(pdf.status, 200);
+      assert.match(pdf.headers.get("content-type")!, /application\/pdf/);
+      assert.equal(Buffer.from(await pdf.arrayBuffer()).subarray(0, 4).toString(), "%PDF");
+
+      const reply = await api(detail, cookies.SUPER_ADMIN, { body: "<b>Plain text</b> response from another administrator." });
+      assert.equal(reply.status, 201);
+      assert.equal(reply.data.entry.author.name, "SUPER_ADMIN");
+      let thread = (await api(detail, cookies.ADMIN)).data;
+      assert.equal(thread.entries.length, 1);
+      assert.equal(thread.entries[0].body, "<b>Plain text</b> response from another administrator.");
+      assert.equal((await api(detail, cookies.ADMIN, { status: "PLANNED", version: thread.item.version }, "PATCH")).status, 200);
+      thread = (await api(detail, cookies.ADMIN)).data;
+      assert.equal(thread.entries[0].fromStatus, "NEW");
+      assert.equal(thread.entries[0].toStatus, "PLANNED");
+      assert.equal(thread.entries[0].author.name, "ADMIN");
+      const results = await Promise.all(["UNDER_REVIEW", "RESOLVED"].map((status) => api(detail, cookies.ADMIN, { status, version: thread.item.version }, "PATCH")));
+      assert.deepEqual(results.map((response) => response.status).sort(), [200, 409]);
+      assert.equal(await prisma.appFeedbackEntry.count({ where: { threadId: id, toStatus: { not: null } } }), 2);
+      assert.equal((await api(detail, cookies.ADMIN, undefined, "DELETE")).status, 405);
+
+      const appointed = await prisma.user.create({ data: { name: "New Administrator", email: "new-admin@test.invalid", role: "ADMIN", passwordHash: hashPassword("Test-only-password-123") } });
+      try {
+        const login = await api("/api/auth/login", undefined, { email: appointed.email, password: "Test-only-password-123" });
+        const cookie = login.headers.get("set-cookie")!.split(";")[0];
+        assert.equal((await api(detail, cookie)).data.entries.length, 3);
+        await prisma.user.update({ where: { id: appointed.id }, data: { isActive: false } });
+        assert.equal((await api(detail, cookie)).status, 401);
+        assert.equal((await api(detail, cookie, { body: "Not active" })).status, 401);
+        await prisma.user.update({ where: { id: appointed.id }, data: { isActive: true, role: "SHAREHOLDER" } });
+        assert.equal((await api(detail, cookie)).status, 403);
+      } finally { await prisma.user.delete({ where: { id: appointed.id } }); }
+    });
+    await t.test("app feedback bounds input, filters pages and rejects forged identity and cross-origin writes", async () => {
+      const endpoint = "/api/admin/app-feedback";
+      const draft = { title: "Another suggestion", body: "Useful details for the administrator.", category: "PROBLEM" };
+      for (const body of [{ ...draft, title: "  " }, { ...draft, body: "x".repeat(4001) }, { ...draft, category: "INVALID" }, { ...draft, authorId: member.id }, { ...draft, status: "RESOLVED" }]) {
+        assert.equal((await api(endpoint, cookies.ADMIN, body)).status, 400);
+      }
+      const post = (body: string, origin?: string) => fetch(base + endpoint, { method: "POST", headers: { cookie: cookies.ADMIN, "Content-Type": "application/json", ...(origin ? { origin } : {}) }, body });
+      assert.equal((await post("not json")).status, 400);
+      assert.equal((await post(JSON.stringify(draft), "https://untrusted.invalid")).status, 403);
+      assert.equal((await post(JSON.stringify({ ...draft, body: "x".repeat(25000) }))).status, 413);
+      assert.equal((await api(endpoint + "?status=NOT_A_STATUS", cookies.ADMIN)).status, 400);
+      assert.equal((await api(endpoint + "?page=-1", cookies.ADMIN)).status, 400);
+      assert.equal((await api(endpoint + "/missing", cookies.ADMIN)).status, 404);
+      assert.equal((await api(endpoint + "/missing", cookies.ADMIN, { body: "Reply" })).status, 404);
+      assert.equal((await api(endpoint + "/missing", cookies.ADMIN, { status: "PLANNED", version: 0 }, "PATCH")).status, 404);
+      const admin = users.find((user) => user.role === "ADMIN")!;
+      await prisma.appFeedbackThread.createMany({ data: Array.from({ length: 23 }, (_, i) => ({ ...draft, category: "PROBLEM", title: `Pagination fixture ${i}`, authorId: admin.id })) });
+      const first = await api(endpoint + "?category=PROBLEM&page=1", cookies.ADMIN);
+      const second = await api(endpoint + "?category=PROBLEM&page=2", cookies.ADMIN);
+      assert.equal(first.data.items.length, 20); assert.equal(first.data.hasMore, true);
+      assert.equal(second.data.items.length, 3); assert.equal(second.data.hasMore, false);
+      assert.equal(new Set([...first.data.items, ...second.data.items].map((item: { id: string }) => item.id)).size, 23);
+      const id = first.data.items[0].id;
+      await prisma.appFeedbackEntry.createMany({ data: Array.from({ length: 32 }, (_, i) => ({ threadId: id, authorId: admin.id, body: `History fixture ${i}` })) });
+      assert.equal((await api(`${endpoint}/${id}`, cookies.ADMIN)).data.entries.length, 30);
+      assert.equal((await api(`${endpoint}/${id}?page=2`, cookies.ADMIN)).data.entries.length, 2);
+    });
     await t.test("new uploads are immediately readable and cannot follow links outside storage", async () => {
       const content = "Temporary upload integration check";
       const form = new FormData();

@@ -13,6 +13,7 @@ Primary domains in this repo:
 - decision voting
 - invitation and account administration
 - email template management
+- admin-only user guide and private app-feedback discussions
 - model-free Telegram availability and account linking
 
 ## Main Stack
@@ -241,9 +242,27 @@ These are known follow-up areas, not reasons to block normal feature work:
 
 ## Deployment
 
-- Current production uses Coolify on `headless.webxpoint0.com`, repository branch
-  `main`, and the root Dockerfile. Follow `docs/COOLIFY.md`; keep credentials in
-  Coolify runtime settings and preserve the PostgreSQL and uploads volumes.
+- App Feedback is separate from guest feedback. All reads/writes require the
+  `app-feedback:manage` permission; members/shareholders/guests must never see it.
+  Preserve append-only replies/status history and optimistic status-update checks.
+- Keep `src/lib/user-guide.ts` and the PDF generator aligned with actual UI
+  capabilities. New feedback tables require the reviewed additive schema rollout
+  in `docs/COOLIFY.md`; never reset or seed the existing production database.
+
+- Current production is deployed through Coolify at `https://apps.virdict.com`
+  (confirmed by the user on 2026-10-22), using repository branch `main` and the
+  root Dockerfile. This supersedes the standalone `reebok.williamson.co.za`
+  deployment and earlier instructions in chat history.
+- Follow `docs/COOLIFY.md`. Use the existing Coolify application and verify its
+  current public domain there before setting `APP_BASE_URL`, email links or
+  Telegram webhooks; the Coolify management URL is not automatically the app URL.
+- Verified on 2026-10-26: app UUID `rp0ajs1n448zkc2kdp0ll6hx` serves
+  `https://reebok.williamson.co.za` from Coolify on `headless.webxpoint0.com`.
+  The domain was retained; the old standalone deployment workflow was not.
+  Scoped SSH backups/database operations are distinct from legacy deploy scripts.
+- Keep credentials in Coolify runtime settings and preserve the existing
+  PostgreSQL and uploads volumes. Do not repeat fresh-install/bootstrap steps
+  for routine updates, reset data, or deploy to the old server.
 - The SSH deployment commands below target the older standalone installation.
   Do not use them to update the current Coolify deployment.
 

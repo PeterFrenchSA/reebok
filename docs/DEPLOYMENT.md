@@ -1,4 +1,11 @@
-# Deploy From Your Mac
+# Legacy Standalone SSH Deployment
+
+**Not the current deployment workflow.** The application is now deployed through
+[Coolify at apps.virdict.com](https://apps.virdict.com). Follow [COOLIFY.md](COOLIFY.md)
+for current updates and preserve its existing database/uploads. The instructions
+below describe the older standalone server only; do not run them against the
+current app. The public hostname has been retained by Coolify; that does not make
+these legacy deployment commands safe to use. Verify the current resource in Coolify.
 
 Target: `root@reebok.williamson.co.za`, using your existing SSH key/agent.
 This is a clean application deployment, not a server wipe. It reuses the existing

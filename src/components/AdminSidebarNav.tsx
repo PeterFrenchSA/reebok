@@ -14,7 +14,9 @@ const adminLinks: Array<{ href: Route; label: string }> = [
   { href: "/admin/finances", label: "Finances" },
   { href: "/admin/templates", label: "Email Templates" },
   { href: "/admin/decisions", label: "Decisions" },
-  { href: "/admin/telegram", label: "Telegram" }
+  { href: "/admin/telegram", label: "Telegram" },
+  { href: "/admin/guide", label: "User Guide" },
+  { href: "/admin/app-feedback", label: "App Feedback" }
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -37,6 +39,7 @@ export function AdminSidebarNav() {
         <Link
           key={item.href}
           href={item.href}
+          aria-current={isActive(pathname, item.href) ? "page" : undefined}
           className={`admin-nav-link ${isActive(pathname, item.href) ? "admin-nav-link-active" : ""}`}
         >
           {item.label}
