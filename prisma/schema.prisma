@@ -656,3 +656,22 @@ model ExternalCalendarEvent {
   @@unique([provider, externalId])
   @@index([startDate, endDate])
 }
+
+model GoogleSheetsSync {
+  id              String    @id @default("house")
+  spreadsheetId   String?
+  enabled         Boolean   @default(false)
+  version         Int       @default(0)
+  updatedById     String?
+  leaseToken      String?
+  leaseUntil      DateTime?
+  lastAttemptAt   DateTime?
+  lastSuccessAt   DateTime?
+  lastSchedulerAt DateTime?
+  nextAttemptAt   DateTime?
+  failureCount    Int       @default(0)
+  lastError       String?
+  lastRowCounts   Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}

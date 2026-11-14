@@ -2,6 +2,7 @@ import { PrismaClient, UserRole } from "@prisma/client";
 import { SAMPLE_ADMIN, SAMPLE_MEMBER } from "../src/lib/default-users";
 import { BOOKING_POLICY_ID, DEFAULT_PET_NOTICE } from "../src/lib/booking-policy";
 import { hashPassword } from "../src/lib/password";
+import { houseRooms } from "../src/lib/room-catalog";
 
 const prisma = new PrismaClient();
 
@@ -95,15 +96,9 @@ async function main() {
     });
   }
 
-  await prisma.room.createMany({
-    data: [
-      { code: "MAIN-01", name: "Main Bedroom", capacity: 2 },
-      { code: "FAM-02", name: "Family Room", capacity: 4 },
-      { code: "TWIN-03", name: "Twin Room", capacity: 2 },
-      { code: "BUNK-04", name: "Bunk Room", capacity: 4 }
-    ],
-    skipDuplicates: true
-  });
+  if (await prisma.room.count() === 0) {
+    await prisma.room.createMany({ data: houseRooms.map((room) => ({ ...room })) });
+  }
 
   if (process.env.SEED_DEMO_USERS !== "true" || process.env.NODE_ENV === "production") return;
 

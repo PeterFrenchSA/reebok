@@ -80,7 +80,35 @@ encryption key off-server. Test restoration. Code rollback does not restore the
 database. Configure SMTP before relying on invitation, booking-link or reminder
 emails; with SMTP unset the current app skips mail delivery.
 
-## User guide and private app feedback rollout
+## Member rooms and pricing rollout (November 2026)
+
+This change adds `/member/book`, `/admin/pricing` and admin accommodation
+corrections. It uses existing tables; no schema migration or production seed is
+needed. Deploy only after the normal committed-release checks and backup.
+
+After deployment, review **Pricing & Rooms** before inviting new bookings:
+
+1. Review current tariffs, or publish the agreed values if none exist. No tariff
+   is silently created when a booking is priced. New versions do not reprice
+   saved bookings or update individual member subscriptions.
+2. Review the actual room inventory. An empty inventory can install the seven
+   confirmed rooms through the admin button. If legacy rooms exist, edit the
+   correct records and add missing rooms manually after checking existing
+   allocations. Never install duplicate rooms or overwrite their IDs. Room 5
+   remains capped at two; the seven-room total is 23.
+3. Existing whole-house reservations continue blocking all rooms. With family
+   agreement, use the admin booking correction to allocate specific rooms,
+   record a reason and review the revised member estimate. It returns the stay
+   to Pending and preserves an audit entry. Notify the family directly, then
+   approve as appropriate; the correction does not send an email itself.
+4. Smoke-test member room and whole-house requests, public whole-house-only
+   requests, room availability and pending approvals. Check that pricing and
+   correction endpoints reject non-admin changes.
+
+The seed script now uses the seven-room catalog only when the inventory is
+empty. It remains a local-development tool, not a routine production rollout step.
+
+## User guide and private app feedback rollout (October 2026)
 
 This release adds `/admin/guide`, `/admin/app-feedback` and the shareable
 `/docs/reebok-family-overview.pdf`. The detailed guide and feedback board require
@@ -116,3 +144,30 @@ deployment is performed merely by adding these files to the repository.
 Guide content is maintained in `src/lib/user-guide.ts`; the one-page PDF source
 is `scripts/generate-family-overview.py` (ReportLab and pypdf required). Regeneration
 writes `output/pdf/reebok-family-overview.pdf` and the matching public download.
+
+## Calendar and Google Sheets rollout (November 2026)
+
+The calendar and portal navigation use existing booking records. Members can see
+lead member names, not contact details, private notes or other families' prices;
+external guest stays remain anonymous. Admin date changes are conflict-checked,
+repriced, audited and returned to pending approval, without a reschedule email.
+
+Google reporting needs the new additive `GoogleSheetsSync` table. Before rollout:
+
+1. Keep verified database/uploads backups on the server unless the owner approves
+   another location. Verify the existing Coolify resource and its current domain.
+2. Review the pinned Prisma schema diff. Expect only the new sync table and its
+   primary key for this feature (and any separately reviewed, not-yet-deployed
+   changes). Stop on destructive/unrelated changes; do not use reset, seed,
+   `--accept-data-loss`, or bootstrap commands.
+3. Apply the reviewed additive schema with the new image's pinned CLI and existing
+   runtime credentials: `node node_modules/prisma/build/index.js db push`.
+   This is an operator action, never an automatic startup command. Deploy the
+   committed release through the existing resource; leave Google sync disabled
+   until the owner provides the workbook and approves its sharing.
+4. Follow `docs/GOOGLE-SHEETS.md` for service-account settings, sharing, manual
+   verification and the scheduled container command. Credentials are runtime-only.
+5. Verify admin/member/guest portal boundaries, family-name calendar redaction,
+   room/house conflicts, approval/rejection and an audited date correction. Check
+   the first live Google snapshot and its scheduler status before claiming sync
+   is operational. A code rollback need not remove the new table or its records.

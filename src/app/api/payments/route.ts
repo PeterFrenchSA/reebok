@@ -104,6 +104,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const existingSubscription = data.subscriptionUserId
+    ? await prisma.subscription.findUnique({ where: { userId: data.subscriptionUserId } }) : null;
+  const now = new Date();
+  const feeConfig = data.subscriptionUserId && !existingSubscription
+    ? await prisma.feeConfig.findFirst({ where: { isActive: true, effectiveFrom: { lte: now },
+      OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }] },
+      orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }, { id: "desc" }] }) : null;
+  if (data.subscriptionUserId && !existingSubscription && !feeConfig) {
+    return NextResponse.json({ error: "Configure this member's subscription or publish a current subscription default in Pricing & Rooms before recording payment." }, { status: 503 });
+  }
+
   const payment = await prisma.payment.create({
     data: {
       bookingId: data.bookingId,
@@ -126,16 +137,12 @@ export async function POST(req: NextRequest) {
   });
 
   if (data.subscriptionUserId) {
-    const feeConfig =
-      (await prisma.feeConfig.findFirst({ where: { isActive: true }, orderBy: { createdAt: "desc" } })) ??
-      (await prisma.feeConfig.create({ data: {} }));
-
     const subscription =
-      (await prisma.subscription.findUnique({ where: { userId: data.subscriptionUserId } })) ??
+      existingSubscription ??
       (await prisma.subscription.create({
         data: {
           userId: data.subscriptionUserId,
-          monthlyAmount: feeConfig.monthlyMemberSubscription,
+          monthlyAmount: feeConfig!.monthlyMemberSubscription,
           reminderEnabled: true,
           arrearsAmount: 0
         }

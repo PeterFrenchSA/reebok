@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ShellNav } from "@/components/ShellNav";
 import "./globals.css";
+import "./coastal.css";
 
 export const metadata: Metadata = {
   title: "Reebok House Manager",

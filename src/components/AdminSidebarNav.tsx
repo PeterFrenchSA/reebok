@@ -1,50 +1,19 @@
-"use client";
-
-import Link from "next/link";
-import type { Route } from "next";
-import { usePathname } from "next/navigation";
-
-const adminLinks: Array<{ href: Route; label: string }> = [
-  { href: "/admin", label: "Overview" },
-  { href: "/admin/bookings", label: "Bookings" },
-  { href: "/admin/assets", label: "Asset Management" },
-  { href: "/admin/maintenance", label: "Maintenance" },
-  { href: "/admin/users", label: "User Administration" },
-  { href: "/admin/feedback", label: "Guest Feedback" },
-  { href: "/admin/finances", label: "Finances" },
-  { href: "/admin/templates", label: "Email Templates" },
-  { href: "/admin/decisions", label: "Decisions" },
-  { href: "/admin/telegram", label: "Telegram" },
-  { href: "/admin/guide", label: "User Guide" },
-  { href: "/admin/app-feedback", label: "App Feedback" }
+import { PortalLink, PortalNav } from "./PortalNav";
+const links: PortalLink[] = [
+  { href: "/admin", label: "Overview", section: "House desk" },
+  { href: "/admin/calendar", label: "Booking calendar", section: "House desk" },
+  { href: "/admin/bookings", label: "Approvals & history", section: "House desk" },
+  { href: "/admin/pricing", label: "Pricing & Rooms", section: "House desk" },
+  { href: "/admin/assets", label: "Asset management", section: "Housekeeping" },
+  { href: "/admin/maintenance", label: "Maintenance", section: "Housekeeping" },
+  { href: "/admin/users", label: "User administration", section: "Family & guests" },
+  { href: "/admin/feedback", label: "Guest feedback", section: "Family & guests" },
+  { href: "/admin/decisions", label: "Decisions", section: "Family & guests" },
+  { href: "/admin/finances", label: "Finances", section: "Records & connections" },
+  { href: "/admin/integrations", label: "Google Sheets", section: "Records & connections" },
+  { href: "/admin/templates", label: "Email templates", section: "Records & connections" },
+  { href: "/admin/telegram", label: "Telegram", section: "Records & connections" },
+  { href: "/admin/guide", label: "User guide", section: "Help & ideas" },
+  { href: "/admin/app-feedback", label: "App feedback", section: "Help & ideas" }
 ];
-
-function isActive(pathname: string, href: string): boolean {
-  if (pathname === href) {
-    return true;
-  }
-  if (href === "/admin") {
-    return false;
-  }
-  return pathname.startsWith(`${href}/`);
-}
-
-export function AdminSidebarNav() {
-  const pathname = usePathname();
-
-  return (
-    <nav className="admin-nav" aria-label="Admin modules">
-      <p className="kicker">Admin Modules</p>
-      {adminLinks.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          aria-current={isActive(pathname, item.href) ? "page" : undefined}
-          className={`admin-nav-link ${isActive(pathname, item.href) ? "admin-nav-link-active" : ""}`}
-        >
-          {item.label}
-        </Link>
-      ))}
-    </nav>
-  );
-}
+export function AdminSidebarNav() { return <PortalNav links={links} label="Admin menu" />; }

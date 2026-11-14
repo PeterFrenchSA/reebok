@@ -42,15 +42,15 @@ export default async function GuestPage() {
 
   return (
     <section className="grid">
-      <article className="card grid">
-        <span className="kicker">Guest Services</span>
-        <h1>Guest Booking Portal</h1>
+      <article className="card coastal-hero grid">
+        <span className="kicker">Your time at Reebok</span>
+        <h1>My stay</h1>
         <p className="lead">
           Welcome {user.name ?? user.email ?? "Guest"}. Create new bookings, manage your current accommodation
           requests, and submit feedback to the house team.
         </p>
         <div className="action-row">
-          <Link href="/" className="btn-primary inline-action">
+          <Link href={canAccessMember ? "/member/book" : "/"} className="btn-primary inline-action">
             Create New Booking
           </Link>
           <Link href="/booking/manage" className="btn-secondary inline-action">
@@ -79,7 +79,7 @@ export default async function GuestPage() {
             <MemberBookingsPanel />
           </article>
 
-          <GuestFeedbackPanel defaultName={user.name} defaultEmail={user.email} />
+          <details className="card disclosure"><summary>Tell us about your stay</summary><GuestFeedbackPanel defaultName={user.name} defaultEmail={user.email} /></details>
         </section>
 
         <aside className="grid guest-bulletin">

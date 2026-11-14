@@ -134,6 +134,20 @@ These are important and should be preserved unless there is a deliberate redesig
 - Approved groups offer a private-chat handoff, never shared booking details.
 - See `docs/TELEGRAM.md` for configuration and rollout requirements.
 
+11. Member accommodation and pricing
+- `/member/book` allows member-capable accounts to reserve rooms or the whole
+  house using the existing six guest categories. Guests remain whole-house-only.
+- `/admin/pricing` publishes dated tariffs and manages bookable rooms. Preserve
+  saved booking totals; new pricing versions do not reprice existing stays or
+  change individual subscriptions. Do not silently create fallback tariffs.
+- Room 5 is capped at two pending confirmation of its extra bed. The confirmed
+  catalog is in `src/lib/room-catalog.ts`. Install it only into an empty inventory;
+  never overwrite existing room identities or allocations automatically.
+- Accommodation corrections require admin permission, a reason, optimistic
+  concurrency and the booking lock. Reprice explicitly, audit and reset approval.
+  Public-to-member conversion requires an active member owner. No correction
+  email is sent automatically; the UI must say so.
+
 ## Local Development
 
 Typical commands:
@@ -273,3 +287,21 @@ These are known follow-up areas, not reasons to block normal feature work:
 - The managed runner uses non-root app builds, protected backups, shared settings/uploads and a brief stopped-app maintenance window.
 - Application rollback never automatically restores the database. Never add forced schema reset/data-loss flags or overwrite secrets from a local environment file.
 - See `docs/DEPLOYMENT.md`; do not run the legacy installer/updater over managed releases.
+
+## Calendar and reporting guardrails
+
+- Members may see the lead member/account name on shared calendars and summaries.
+  This is an intentional privacy policy change: guest stays remain anonymous;
+  contacts, private notes, room labels, tokens and other families' amounts stay
+  redacted. Non-owner calendar IDs are synthetic and cannot authorize edits.
+- Admin date corrections require a reason, optimistic version, current quote,
+  booking lock and shared conflict checks; they reset approval and retain audit.
+- Google Sheets is one-way reporting with admin-only `integrations:manage` access.
+  Use one dedicated service account, runtime-only secrets, fixed Google endpoints,
+  a database lease, literal cell values and one atomic batch for owned report tabs.
+  Never send contact details, tokens, document URLs or private notes to Sheets.
+- Google workbook sharing is independent of app RBAC. All tabs, including finance,
+  are visible to anyone with workbook access; do not promise tab-level privacy.
+- `GoogleSheetsSync` is an additive schema change. See `docs/GOOGLE-SHEETS.md` and
+  `docs/COOLIFY.md`; no production reset/seed. Scheduled sync requires an explicit
+  Coolify task. Tests must blank Google credentials and use a fake transport.

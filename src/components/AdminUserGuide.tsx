@@ -14,7 +14,7 @@ export function AdminUserGuide() {
       <p className="guide-meta">Reviewed against this release: {guideReviewDate}. Guide access is admin-only; the one-page overview is safe to share with family.</p>
       <div className="action-row"><a href="/docs/reebok-family-overview.pdf" download className="btn-secondary inline-action">Download family overview (PDF)</a></div>
     </header>
-    <aside className="notice"><strong>Read this first.</strong> The website currently uses the public whole-house booking form. Member room booking needs admin assistance. Email and Telegram require separate setup; their live configuration is not confirmed by this guide.</aside>
+    <aside className="notice"><strong>Read this first.</strong> Members can book rooms or the whole house at published member rates. Guests book the whole house only. Admins must review room inventory and tariffs in Pricing &amp; Rooms. Email and Telegram require separate setup; their live configuration is not confirmed by this guide.</aside>
     <section className="card grid guide-index" aria-label="Find a guide topic">
       <div className="field"><label htmlFor="guide-search">Find a topic</label><input id="guide-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try pets, fees, voting or invitations" /></div>
       <p role="status" className="lead">{sections.length} topic{sections.length === 1 ? "" : "s"}{search ? " matching your search" : " in this guide"}.</p>

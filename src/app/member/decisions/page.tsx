@@ -1,0 +1,2 @@
+import { MemberDecisionVoting } from "@/components/MemberDecisionVoting";
+export default function MemberDecisionsPage() { return <section className="grid"><header className="card coastal-hero grid"><span className="kicker">Have your say</span><h1>Family decisions</h1><p className="lead">Propose an idea, review active polls and help shape the future of the house.</p></header><MemberDecisionVoting /></section>; }

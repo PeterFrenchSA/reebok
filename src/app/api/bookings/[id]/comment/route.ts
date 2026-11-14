@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
+import { rejectForeignWrite } from "@/lib/write-origin";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -12,6 +13,8 @@ const commentSchema = z.object({
 });
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
+  const rejected = rejectForeignWrite(req);
+  if (rejected) return rejected;
   const user = await getSessionUser(req);
   if (!user || !hasPermission(user.role, "booking:approve")) {
     return NextResponse.json({ error: "Approval permission required" }, { status: 403 });

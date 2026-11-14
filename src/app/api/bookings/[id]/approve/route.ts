@@ -12,6 +12,7 @@ import { renderEmailTemplate } from "@/lib/email-templates";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
+import { rejectForeignWrite } from "@/lib/write-origin";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -32,12 +33,17 @@ function sanitizeBooking<T extends { manageToken?: string | null }>(booking: T) 
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
+  const rejected = rejectForeignWrite(req);
+  if (rejected) return rejected;
   const user = await getSessionUser(req);
   if (!user || !hasPermission(user.role, "booking:approve")) {
     return NextResponse.json({ error: "Approval permission required" }, { status: 403 });
   }
 
   const { id } = await params;
+  const body = await req.json().catch(() => null);
+  const expectedUpdatedAt = body?.expectedUpdatedAt;
+  if (expectedUpdatedAt !== undefined && (typeof expectedUpdatedAt !== "string" || !Number.isFinite(Date.parse(expectedUpdatedAt)))) return NextResponse.json({ error: "Invalid booking version." }, { status: 400 });
 
   const existing = await prisma.booking.findUnique({
     where: { id },
@@ -49,6 +55,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   }
 
   if (existing.status === BookingStatus.APPROVED) {
+    if (expectedUpdatedAt && existing.updatedAt.toISOString() !== expectedUpdatedAt) return NextResponse.json({ error: "Booking changed. Refresh before approving." }, { status: 409 });
     return NextResponse.json({ booking: sanitizeBooking(existing), message: "Booking already approved" });
   }
 
@@ -56,6 +63,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
   booking = await withBookingLock(async (tx) => {
     const current = await tx.booking.findUnique({ where: { id }, include: { roomAllocations: true } });
+    if (expectedUpdatedAt && current?.updatedAt.toISOString() !== expectedUpdatedAt) throw new BookingRuleError("Booking changed. Refresh before approving.", 409);
     if (!current || current.status !== BookingStatus.PENDING) throw new BookingRuleError("Only pending bookings can be approved.", 409);
     await assertReservation(tx, { ...current, roomAllocations: current.roomAllocations });
     const booking = await tx.booking.update(

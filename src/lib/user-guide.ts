@@ -1,13 +1,13 @@
 export type GuideSection = { id: string; title: string; audience: string; intro: string; steps: string[]; caution?: string };
-export const guideReviewDate = "26 October 2026";
+export const guideReviewDate = "14 November 2026";
 export const guideSections: GuideSection[] = [
   {
     id: "access", title: "Start here: accounts and roles", audience: "Everyone",
     intro: "One house, several kinds of access. Your role determines what you can see and do; being a shareholder does not make you an administrator.",
     steps: [
       "Use the house website link supplied by your administrator and sign in. Coolify is the hosting control panel, not the family login page.",
-      "Guests use the Guest Booking Portal for their own accommodation, guest feedback and Useful Info. Members and admins may also use this portal for their own stays.",
-      "Family members use the Member Console for shared booking summaries, their own bookings and fee status, maintenance reporting and eligible decisions. Shared summaries are not access to another person's private booking record.",
+      "Guests use My Stay for their own accommodation, guest feedback and Useful Info. Members and admins may also use My Stay for their own stays. On smaller screens, open Menu to switch portals.",
+      "Family home has shortcuts to upcoming stays, fees, maintenance and eligible decisions. Use the Family menu for separate pages; on mobile, expand it with Browse. Shared calendars show lead member names, not contact details or another family's prices and private record. Guest stays remain anonymous.",
       "Shareholders have member access plus Financial Records with full read-only finances and exports. They cannot edit finances, approve bookings or use the admin portal unless appointed to an admin role.",
       "Appointed admins handle approvals, accounts and house operations. Only a super-admin may create or manage another super-admin. Ask an administrator for account or password help; there is no self-service password-reset screen."
     ],
@@ -18,19 +18,21 @@ export const guideSections: GuideSection[] = [
     intro: "A request is not a confirmed booking. Save the reference shown after submission and check the booking status rather than relying only on an email.",
     steps: [
       "Open the landing page or select Create New Booking. Choose check-in first; the calendar then moves to check-out, at least one day later.",
-      "Enter the lead guest's name, email and phone, the adult/child counts, pets and any notes. Use an email address you can access.",
+      "Signed-in members, shareholders and admins use the member booking page: choose Shared family stay for one or more rooms, or Whole house for exclusive use. Guests use the public whole-house form with adult/child counts.",
+      "Members: count each person once under the existing member/dependent/guest/other-family categories. For a shared stay, select available rooms and assign every guest to a room, within its capacity. An optional family/group label helps identify each party. You can submit separate family bookings for the same dates in different rooms.",
+      "Enter lead contact details, pets and notes. Members receive updates at their account email. Review the per-category member estimate before submitting; the server checks rates and availability again.",
       "Review the pet notice when bringing pets. The default rule is that the property is pet friendly, but furniture and bedrooms are not; admins may customise this notice.",
       "Submit once and keep the reference and estimated total. A pending request holds the accommodation until an administrator acts; it does not automatically expire.",
       "Whole-house requests conflict with every room reservation. Room-specific requests conflict with the same rooms, but different rooms may overlap. Checkout is exclusive, so the next stay may begin on the previous checkout date.",
       "The current availability window is 1-90 nights, up to 548 days ahead. Pending and confirmed reservations are distinguished in the calendar, but both prevent conflicting requests."
     ],
-    caution: "The current website form submits external whole-house requests at public rates, including when reached from the member console. Room-specific member bookings and member pricing are supported by the backend, but there is no complete member room-booking form. Contact an admin before submitting a request that needs those arrangements."
+    caution: "Whole-house means exclusive use and blocks every room, even for a small party. Some rooms available does not mean every room is free. Room 5 is limited to two guests until its extra bed is confirmed. If an old family booking blocks the whole house incorrectly, ask an admin to correct its allocation; never assume it has been converted automatically."
   },
   {
     id: "manage", title: "Find, change or withdraw a booking", audience: "Guests, members and admins",
     intro: "Your signed-in account can manage bookings attached to it. Anonymous bookings are managed through a private link, not by knowing a reference alone.",
     steps: [
-      "Check My Booking History in the Member Console or My Bookings & Accommodation in the Guest Booking Portal. Use the booking's manage link where available.",
+      "Open Family > My bookings or My Stay > My Bookings & Accommodation. Switch between Current & upcoming and Booking history. Rejected and cancelled stays are in history even if their dates are still in the future. Use the booking's manage link.",
       "Alternatively open Manage by Reference and supply the reference and matching email. For an unsigned-in visitor, this requests an emailed private link; the reference/email combination does not grant direct access.",
       "Open the private link to review dates, guest total, pets, notes and lead contact details. Keep this link confidential.",
       "Save an edit only when ready. Saving returns the booking to Pending and clears any previous approval, including note-only changes. The accommodation is checked for conflicts again.",
@@ -41,15 +43,41 @@ export const guideSections: GuideSection[] = [
   },
   {
     id: "approvals", title: "Approve bookings and maintain the history", audience: "Admins",
-    intro: "Overview shows current requests and active stays. Bookings is the fuller workspace for decisions, comments, policy and audit history.",
+    intro: "Overview is a short house desk with requests and upcoming stays. Use Booking calendar for visual management or Approvals & history for lists and audit records.",
     steps: [
-      "Open Bookings and review Pending Approvals. Check dates, guests, pets, notes and the proposed amount. Confirm member-specific arrangements separately when the public form was used.",
+      "Open Approvals & history and review Pending Approvals at the top, or select a stay in Booking calendar. Check dates, room allocations, guest categories, pets, notes and the proposed amount.",
+      "For a future family stay entered with the wrong accommodation, expand Correct member accommodation / release unused rooms. Confirm the family agrees, select rooms or the whole house, check the categories and revised estimate, and record a reason. This retains the party size and dates, recalculates member pricing, logs the correction and returns the booking to Pending. Notify the family directly: the correction itself sends no email. Public bookings can be converted only when owned by an active member account.",
       "Approve an acceptable request. The server checks for conflicts before recording approval. Approval confirms the reservation; it is not confirmation of payment.",
       "Use the booking's comment action to record a clarification. To decline a request or reject an existing booking, enter a clear reason and use Reject.",
       "Rejected bookings release their accommodation and should appear in History & Audit Trail rather than the active list. Expand a history entry to read its creation, approval, rejection and comment records.",
-      "In Booking Policy, update the pet notice and the Guest Portal Useful Info title/body. Replace example contact numbers with verified ones; one notice-board item is shown for each non-empty line."
+      "Open House notices & booking settings from Approvals & history to update the pet notice and My Stay Useful Info title/body. Replace example contact numbers with verified ones; one notice-board item is shown for each non-empty line."
     ],
     caution: "History records app actions, not offline conversations or a bank reconciliation. Add a clear comment when an important decision was made outside the app."
+  },
+  {
+    id: "calendar", title: "See who is staying and manage the calendar", audience: "Members and admins",
+    intro: "The room planner, month view and agenda show the same reservations. Pending and approved stays both hold accommodation; rejected/cancelled stays do not.",
+    steps: [
+      "Members open Who's staying; admins open Booking calendar. Switch between Room planner, Month and Agenda. Agenda opens first on small screens. Use Today, Previous, Next or Jump to date, then filter accommodation and status. On phones, expand Filters & calendar help for those controls.",
+      "The planner shows one row per room over two weeks. A whole-house stay appears across every room. A stay occupies its check-in nights, not its checkout day. Pending holds have a striped treatment and label; approved stays have a solid green treatment.",
+      "Members see the lead member/account name and accommodation summary. Names of external guests, contact details, private notes and other families' prices are not shared. Your own stay has a Manage my booking link. The family calendar shows current/upcoming active stays, not other families' booking history.",
+      "Admins can select any stay for details, approval, rejection, comments and audit history. Select All statuses to include rejected/cancelled history. Close returns to the same calendar context; drag-and-drop changes are deliberately not enabled.",
+      "To reschedule, expand Change dates, select check-in/check-out, review the new estimate and enter a reason/agreement. Saving rechecks availability, records the change and returns the stay to Pending. Rooms and guest categories remain unchanged. Notify the family directly: no rescheduling email is sent. If another admin changes the booking first, refresh before retrying."
+    ],
+    caution: "Calendar availability is a view, not a guarantee until the server accepts a request. Use Refresh calendar for recent changes from another device. Approval confirms accommodation, not payment."
+  },
+  {
+    id: "google-sheets", title: "Share a reporting workbook", audience: "Admins configure; the owner controls Google sharing",
+    intro: "Google Sheets is a one-way reporting copy of the booking roster, expenses, payments and member fees. The app remains the source of truth.",
+    steps: [
+      "Open Admin > Google Sheets. Create a blank workbook in the owner's personal Google account, then ask the operator to configure the dedicated service account and five-minute scheduled job. No Gmail password is required.",
+      "Share that workbook with the integration email displayed in the app as Editor. Paste the workbook link, acknowledge the sharing warning, enable and save. Run Sync now and verify the last-success timestamp and all five tabs, including Readme.",
+      "Grant family access directly in Google Drive. Anyone with workbook access can see all tabs, including finances; app roles do not apply inside Google. Keep access limited to people entitled to those records.",
+      "The managed tabs include all history, even rejected/cancelled bookings, and are replaced on each sync. Put manual calculations and notes in separate tabs. Pre-existing tabs are not silently adopted or overwritten.",
+      "Check Last verified success, row counts and Last scheduler check-in. Failed runs retry later with increasing delays. A disconnected Google account does not stop booking in the app. Refresh status after a manual retry.",
+      "Treat estimates, payment statuses and arrears according to their labels; this is not bank reconciliation or a backup. Contact fields, private booking notes, management links and document URLs are excluded. Titles and references are exported, so do not put secrets in them."
+    ],
+    caution: "Until the workbook, runtime credentials and scheduled job are configured and a live sync is verified, no automatic reporting is operational. Hiding a tab is not a privacy boundary."
   },
   {
     id: "accounts", title: "Add users and review registrations", audience: "Admins",
@@ -74,7 +102,20 @@ export const guideSections: GuideSection[] = [
       "Export the expenses ledger as CSV or XLSX. For imports, follow the screen's supported format/columns, keep a backup/export first and review the imported result. Do not assume repeated imports are automatically deduplicated.",
       "Reconcile balances and member coverage against the real bank records. Reminder delivery needs both configured email and an operator-configured scheduled reminder job. Setting a reminder preference alone does not schedule the server."
     ],
-    caution: "Booking tariffs are separate from monthly member fees. There is no complete room/tariff configuration screen here; ask the technical administrator to verify that setup. Do not treat a recorded payment method as proof of a working online payment integration."
+    caution: "Booking tariffs are separate from monthly member fees. Use Pricing & Rooms for accommodation tariffs; changing a subscription default does not update existing individual subscriptions. Do not treat a recorded payment method as proof of a working online payment integration."
+  },
+  {
+    id: "pricing", title: "Publish tariffs and maintain rooms", audience: "Admins",
+    intro: "Pricing & Rooms manages dated accommodation tariffs and the bookable room inventory. Shareholders retain read-only financial API access; they cannot publish changes.",
+    steps: [
+      "Review all six existing member guest-category prices. They apply per person per night for both room bookings and whole-house member stays; there is no separate member whole-house surcharge.",
+      "Set external adult and child-under-six rates, currency and any external whole-house minimum. The minimum is for the entire stay, not per night. Add annual external seasonal rates with unique priorities; higher priority wins on overlapping nights. Seasons do not change member rates.",
+      "Choose an effective check-in date and publish a new version. The latest applicable version at check-in governs the stay; external seasons are evaluated night by night. Existing saved booking totals and individual subscriptions are not automatically changed. Date edits and admin accommodation corrections may recalculate an estimate.",
+      "Use Pricing versions to inspect past values or load them as a new draft. If another admin publishes while you are editing, reload before trying again. No bookings can be priced without an applicable published tariff.",
+      "Review Room inventory. Only an empty inventory offers Install the seven confirmed rooms. Existing installations must review/edit their current room records and add missing rooms; do not duplicate or rename occupied rooms without checking their physical identity. Room 5 remains capped at two. The confirmed seven-room total is 23.",
+      "Do not reduce capacity or disable a room needed by an active reservation. The app blocks changes that invalidate room allocations or exceed the remaining house capacity. Existing whole-house bookings are not split automatically."
+    ],
+    caution: "Publish only agreed family tariffs. No new approved prices are invented by this screen. Room descriptions are visible to members; do not put private notes in them."
   },
   {
     id: "maintenance", title: "Assets and maintenance", audience: "Members and admins",

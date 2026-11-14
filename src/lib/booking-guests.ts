@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+export const roomAllocationSchema = z.object({
+  roomId: z.string().min(1).max(120),
+  guestLabel: z.string().trim().max(120).optional(),
+  guestCount: z.number().int().min(1).max(50)
+});
+
+export function validGuestCategories(source: string, counts: Record<string, number>): boolean {
+  return source === "INTERNAL"
+    ? !counts.visitorAdult && !counts.visitorChildUnder6
+    : Object.entries(counts).every(([key, count]) => count === 0 || ["visitorAdult", "visitorChildUnder6"].includes(key));
+}
+
 export const guestBreakdownSchema = z
   .object({
     member: z.number().int().nonnegative().default(0),

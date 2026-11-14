@@ -1,0 +1,2 @@
+import { MemberMaintenanceWorkflow } from "@/components/MemberMaintenanceWorkflow";
+export default function MemberMaintenancePage() { return <section className="grid"><header className="card coastal-hero grid"><span className="kicker">Care for the house</span><h1>Maintenance & assets</h1><p className="lead">Report what needs attention and follow progress. For urgent safety concerns, contact the house team directly.</p></header><MemberMaintenanceWorkflow /></section>; }

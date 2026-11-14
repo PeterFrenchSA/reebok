@@ -1,8 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { AccommodationSummary, BookingAccommodationSummary } from "@/components/BookingRoomFields";
 
-type Booking = {
+type Booking = AccommodationSummary & {
   id: string;
   source: string;
   scope: string;
@@ -301,6 +302,8 @@ export function ManageBookingPage({ initialReference = "", initialToken = "", in
           <p className="lead">
             Current total: {booking.currency} {Number(booking.totalAmount ?? 0).toFixed(2)}
           </p>
+          <BookingAccommodationSummary booking={booking} />
+          <p className="lead">To change rooms or guest categories, contact an administrator. Date changes retain your room allocation and are checked against other reservations.</p>
 
           <div className="action-row">
             <button type="button" className="btn-primary" disabled={saving} onClick={() => void saveBooking()}>

@@ -11,6 +11,8 @@ import { addDays, getAvailability, propertyToday } from "../src/lib/availability
 import { acceptTelegramUpdate, deliverTelegramUpdate } from "../src/lib/telegram-updates";
 import { BotReply, TelegramUpdateInput } from "../src/lib/telegram";
 import { hashOpaqueToken } from "../src/lib/tokens";
+import { testMemberBookings } from "./member-booking.integration";
+import { testCalendarAndSheets } from "./calendar-sheets.integration";
 
 const database = new URL(process.env.TEST_DATABASE_URL ?? "http://invalid");
 if (database.hostname !== "127.0.0.1" || database.pathname !== "/reebok_bot_test" || process.env.DATABASE_URL !== process.env.TEST_DATABASE_URL) throw new Error("Use the isolated integration test runner, never a real database.");
@@ -196,11 +198,29 @@ test("production HTTP and database integration (no external Telegram or SMTP req
         await rm(outside, { recursive: true, force: true });
       }
     });
+    await t.test("empty installations require published rates and safely initialize the seven confirmed rooms", async () => {
+      const quote = await api("/api/fees/calculate", cookies.FAMILY_MEMBER, { source: "INTERNAL", startDate: addDays(propertyToday(), 1), nights: 1, counts: { member: 1 } });
+      assert.equal(quote.status, 503);
+      assert.equal(await prisma.feeConfig.count(), 0);
+      assert.equal((await getAvailability(addDays(propertyToday(), 1), addDays(propertyToday(), 2))).available, false);
+      const paymentsBefore = await prisma.payment.count();
+      const payment = await api("/api/payments", cookies.ADMIN, { subscriptionUserId: member.id, amount: 100, method: "MANUAL_PROOF", status: "CONFIRMED" });
+      assert.equal(payment.status, 503);
+      assert.equal(await prisma.payment.count(), paymentsBefore);
+      assert.equal(await prisma.feeConfig.count(), 0, "Payments must not silently publish accommodation tariffs");
+      const setup = await api("/api/rooms", cookies.ADMIN, { action: "initialize-house" });
+      assert.equal(setup.status, 201);
+      assert.deepEqual(setup.data.rooms.map((room: { capacity: number }) => room.capacity), [2, 3, 3, 6, 2, 2, 5]);
+      assert.equal((await api("/api/rooms", cookies.ADMIN, { action: "initialize-house" })).status, 409);
+      await prisma.room.deleteMany();
+    });
     const roomA = await prisma.room.create({ data: { name: "Room A", code: "A", capacity: 2 } });
     const roomB = await prisma.room.create({ data: { name: "Room B", code: "B", capacity: 2 } });
     await prisma.feeConfig.create({ data: {} });
     const day = (n: number) => addDays(propertyToday(), n);
     const create = (start: number, end: number, roomId?: string) => api("/api/bookings", cookies.FAMILY_MEMBER, { source: "INTERNAL", scope: roomId ? "ROOM_SPECIFIC" : "WHOLE_HOUSE", startDate: day(start), endDate: day(end), guestBreakdown: { member: 1 }, roomAllocations: roomId ? [{ roomId, guestCount: 1 }] : undefined });
+    await testMemberBookings(t, base, cookies, member.id, roomA.id, roomB.id);
+    await testCalendarAndSheets(t, base, cookies, member.id, roomA.id, roomB.id);
 
     await t.test("role boundaries and safe production login", async () => {
       assert.equal((await api("/api/admin/telegram", cookies.SHAREHOLDER)).status, 403);

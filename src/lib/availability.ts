@@ -60,10 +60,11 @@ export async function getAvailability(start: string, end: string, roomIds: strin
     status: { in: [BookingStatus.PENDING, BookingStatus.APPROVED] },
     startDate: { lt: dateValue(end) }, endDate: { gt: dateValue(start) }
   }, select: occupancySelect });
+  const state = occupancyState(bookings.filter((b) => blocksRooms(b, roomIds)));
   return {
     startDate: start, endDate: end, nights, timezone: PROPERTY_TIMEZONE,
     scope: roomIds.length ? "ROOM_SPECIFIC" as const : "WHOLE_HOUSE" as const,
-    selectedRoomIds: roomIds, ...occupancyState(bookings.filter((b) => blocksRooms(b, roomIds))),
+    selectedRoomIds: roomIds, ...state, available: rooms.length > 0 && state.available,
     rooms: rooms.map((room) => ({ ...room, ...occupancyState(bookings.filter((b) => blocksRooms(b, [room.id]))) })),
     horizon: bookingHorizon()
   };
@@ -85,6 +86,13 @@ export async function assertReservation(tx: Prisma.TransactionClient, input: {
     if (input.endDate <= input.startDate) throw new BookingRuleError("Check-out must be after check-in.");
   } else validateStay(input.startDate.toISOString().slice(0, 10), input.endDate.toISOString().slice(0, 10));
   const allocations = input.roomAllocations ?? [];
+  if (!Number.isInteger(input.totalGuests) || input.totalGuests < 1 || input.totalGuests > 50) throw new BookingRuleError("Choose between 1 and 50 guests.");
+  if (input.scope === BookingScope.WHOLE_HOUSE) {
+    if (allocations.length) throw new BookingRuleError("Whole-house reservations must not include separate room allocations.");
+    const rooms = await tx.room.findMany({ where: { isBookable: true }, select: { capacity: true } });
+    if (!rooms.length) throw new BookingRuleError("The room inventory is not ready. Please contact an administrator.", 503);
+    if (input.totalGuests > rooms.reduce((sum, room) => sum + room.capacity, 0)) throw new BookingRuleError("Guest count exceeds the bookable house capacity.");
+  }
   if (input.scope === BookingScope.ROOM_SPECIFIC) {
     if (!allocations.length || new Set(allocations.map((a) => a.roomId)).size !== allocations.length) throw new BookingRuleError("Choose at least one room, without duplicates.");
     const rooms = await tx.room.findMany({ where: { id: { in: allocations.map((a) => a.roomId) }, isBookable: true } });

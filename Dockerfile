@@ -24,6 +24,7 @@ COPY --from=build --chown=node:node /app/.next ./.next
 COPY --from=build --chown=node:node /app/public ./public
 COPY --from=build --chown=node:node /app/prisma ./prisma
 COPY --from=build --chown=node:node /app/scripts/create-admin.ts ./scripts/create-admin.ts
+COPY --from=build --chown=node:node /app/scripts/sync-google-sheets.mjs ./scripts/sync-google-sheets.mjs
 COPY --from=build --chown=node:node /app/src/lib ./src/lib
 COPY --from=build --chown=node:node /app/next.config.mjs /app/tsconfig.json ./
 USER node

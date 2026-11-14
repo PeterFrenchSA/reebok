@@ -1,4 +1,4 @@
-import { withBookingLock } from "@/lib/availability";
+import { BookingRuleError, withBookingLock } from "@/lib/availability";
 import { BookingAuditAction, BookingStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -13,9 +13,11 @@ import { renderEmailTemplate } from "@/lib/email-templates";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
+import { rejectForeignWrite } from "@/lib/write-origin";
 
 const rejectSchema = z.object({
-  reason: z.string().min(3).max(500)
+  reason: z.string().min(3).max(500),
+  expectedUpdatedAt: z.string().datetime().optional()
 });
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -37,13 +39,15 @@ function sanitizeBooking<T extends { manageToken?: string | null }>(booking: T) 
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
+  const rejected = rejectForeignWrite(req);
+  if (rejected) return rejected;
   const user = await getSessionUser(req);
   if (!user || !hasPermission(user.role, "booking:approve")) {
     return NextResponse.json({ error: "Approval permission required" }, { status: 403 });
   }
 
   const { id } = await params;
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
   const parsed = rejectSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -59,7 +63,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   }
 
-  const booking = await withBookingLock(async (tx) => {
+  let booking;
+  try {
+  booking = await withBookingLock(async (tx) => {
+    const current = await tx.booking.findUnique({ where: { id } });
+    if (parsed.data.expectedUpdatedAt && current?.updatedAt.toISOString() !== parsed.data.expectedUpdatedAt) throw new BookingRuleError("Booking changed. Refresh before rejecting.", 409);
     const result = await tx.booking.update({
       where: { id },
       data: {
@@ -81,6 +89,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     });
     return result;
   });
+  } catch (error) {
+    if (error instanceof BookingRuleError) return NextResponse.json({ error: error.message }, { status: error.status });
+    throw error;
+  }
 
   const requesterEmail = booking.requestedBy?.email ?? booking.externalLeadEmail;
   if (requesterEmail) {

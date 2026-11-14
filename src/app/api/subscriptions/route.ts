@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const canViewAll = hasPermission(user.role, "finance:view");
+  const canViewAll = hasPermission(user.role, "finance:view") && req.nextUrl.searchParams.get("mineOnly") !== "true";
 
   const subscriptions = await prisma.subscription.findMany({
     where: canViewAll ? undefined : { userId: user.id },

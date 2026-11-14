@@ -13,7 +13,7 @@ import {
 } from "@/lib/booking-manage";
 import { calculateNights } from "@/lib/booking";
 import { renderEmailTemplate } from "@/lib/email-templates";
-import { calculateBookingFees } from "@/lib/fees";
+import { quoteBooking } from "@/lib/booking-pricing";
 import { getApproverEmails, sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
@@ -38,7 +38,7 @@ const updateSchema = lookupSchema.extend({
 
 type AccessResult = {
   booking: Prisma.BookingGetPayload<{
-    include: { requestedBy: { select: { id: true; email: true; role: true } } };
+    include: { requestedBy: { select: { id: true; email: true; role: true } }; roomAllocations: { include: { room: { select: { name: true } } } } };
   }>;
   actorLabel: string;
   actorId?: string;
@@ -48,7 +48,7 @@ type AccessResult = {
 async function resolveAccess(req: NextRequest, payload: z.infer<typeof lookupSchema>): Promise<AccessResult | null> {
   const booking = await prisma.booking.findUnique({
     where: { id: payload.reference },
-    include: { requestedBy: { select: { id: true, email: true, role: true } } }
+    include: { requestedBy: { select: { id: true, email: true, role: true } }, roomAllocations: { include: { room: { select: { name: true } } } } }
   });
 
   if (!booking) {
@@ -108,6 +108,7 @@ export async function GET(req: NextRequest) {
       id: booking.id,
       source: booking.source,
       scope: booking.scope,
+      roomAllocations: booking.roomAllocations,
       status: booking.status,
       startDate: booking.startDate,
       endDate: booking.endDate,
@@ -141,7 +142,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -183,6 +184,7 @@ export async function PATCH(req: NextRequest) {
     await assertReservation(tx, { ...current, startDate, endDate, totalGuests: parsed.data.totalGuests });
     requiresReapproval = current.status !== BookingStatus.PENDING;
     let totalAmount: Prisma.Decimal | number | string | null = current.totalAmount;
+    let currency = current.currency;
     let feeSnapshot: Prisma.InputJsonValue | undefined =
       current.feeSnapshot === null ? undefined : (current.feeSnapshot as Prisma.InputJsonValue);
 
@@ -192,28 +194,17 @@ export async function PATCH(req: NextRequest) {
       throw new BookingRuleError("This change needs an updated guest-category breakdown. Please contact an administrator or submit a new request.");
     }
     if (changedStay && counts.success) {
-      const feeConfig =
-        (await tx.feeConfig.findFirst({
-          where: {
-            isActive: true,
-            effectiveFrom: { lte: startDate },
-            OR: [{ effectiveTo: null }, { effectiveTo: { gte: startDate } }]
-          },
-          orderBy: { effectiveFrom: "desc" }
-        })) ?? (await tx.feeConfig.create({ data: {} }));
-
-      const seasonalRates = await tx.seasonalRate.findMany({ where: { feeConfigId: feeConfig.id, enabled: true } });
-      const breakdown = calculateBookingFees(
+      const { breakdown } = await quoteBooking(
         {
           source: current.source === BookingSource.EXTERNAL_PUBLIC ? "EXTERNAL_PUBLIC" : "INTERNAL",
           startDate,
           nights,
           counts: counts.data
         },
-        feeConfig,
-        seasonalRates
+        tx
       );
       totalAmount = breakdown.total;
+      currency = breakdown.currency;
       feeSnapshot = breakdown as Prisma.InputJsonValue;
     }
 
@@ -234,10 +225,12 @@ export async function PATCH(req: NextRequest) {
         externalLeadEmail: parsed.data.externalLeadEmail,
         externalLeadPhone: parsed.data.externalLeadPhone,
         totalAmount,
+        currency,
         feeSnapshot
       },
       include: {
-        requestedBy: { select: { name: true, email: true } }
+        requestedBy: { select: { name: true, email: true } },
+        roomAllocations: { include: { room: { select: { name: true } } } }
       }
     });
 

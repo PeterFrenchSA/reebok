@@ -1,4 +1,4 @@
-import { guestBreakdownSchema } from "@/lib/booking-guests";
+import { guestBreakdownSchema, roomAllocationSchema } from "@/lib/booking-guests";
 import { assertReservation, BookingRuleError, dateOnly, dateValue, withBookingLock } from "@/lib/availability";
 import {
   BookingAuditAction,
@@ -18,12 +18,13 @@ import {
   hashBookingManageToken
 } from "@/lib/booking-manage";
 import { renderEmailTemplate } from "@/lib/email-templates";
-import { calculateBookingFees } from "@/lib/fees";
+import { quoteBooking } from "@/lib/booking-pricing";
 import { getSessionUser } from "@/lib/auth";
 import { getApproverEmails, sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 import { hasPermission } from "@/lib/rbac";
+import { sharedBookingName } from "@/lib/booking-calendar";
 
 const bookingGuestSchema = z.object({
   fullName: z.string().min(1),
@@ -31,12 +32,6 @@ const bookingGuestSchema = z.object({
   guestType: z.nativeEnum(GuestType),
   userId: z.string().optional(),
   isPrimaryContact: z.boolean().optional()
-});
-
-const roomAllocationSchema = z.object({
-  roomId: z.string().min(1),
-  guestLabel: z.string().optional(),
-  guestCount: z.number().int().positive().max(20)
 });
 
 const createBookingSchema = z.object({
@@ -51,7 +46,9 @@ const createBookingSchema = z.object({
   externalLeadPhone: z.string().max(50).optional(),
   guests: z.array(bookingGuestSchema).optional(),
   guestBreakdown: guestBreakdownSchema,
-  roomAllocations: z.array(roomAllocationSchema).optional()
+  roomAllocations: z.array(roomAllocationSchema).max(50).optional(),
+  quotedTotal: z.number().nonnegative().optional(),
+  quotedFeeConfigId: z.string().optional()
 });
 
 function sumGuests(payload: z.infer<typeof createBookingSchema>): number {
@@ -74,27 +71,6 @@ function sumGuests(payload: z.infer<typeof createBookingSchema>): number {
 
 function asDateLabel(value: Date): string {
   return value.toISOString().slice(0, 10);
-}
-
-async function getActiveFeeConfig(bookingStartDate: Date) {
-  let feeConfig = await prisma.feeConfig.findFirst({
-    where: {
-      isActive: true,
-      effectiveFrom: { lte: bookingStartDate },
-      OR: [{ effectiveTo: null }, { effectiveTo: { gte: bookingStartDate } }]
-    },
-    orderBy: { effectiveFrom: "desc" }
-  });
-
-  if (!feeConfig) {
-    feeConfig = await prisma.feeConfig.create({ data: {} });
-  }
-
-  const seasonalRates = await prisma.seasonalRate.findMany({
-    where: { feeConfigId: feeConfig.id, enabled: true }
-  });
-
-  return { feeConfig, seasonalRates };
 }
 
 const adminBookingInclude = {
@@ -123,12 +99,14 @@ const ownBookingSelect = {
   totalGuests: true,
   petCount: true,
   currency: true,
-  totalAmount: true
+  totalAmount: true,
+  roomAllocations: { select: { guestCount: true, room: { select: { id: true, name: true } } } }
 } as const;
 
 const memberSummarySelect = {
   ...ownBookingSelect,
-  requestedById: true
+  requestedById: true,
+  requestedBy: { select: { name: true, role: true } }
 } as const;
 
 export async function GET(req: NextRequest) {
@@ -157,7 +135,7 @@ export async function GET(req: NextRequest) {
       : {
           OR: [
             { requestedById: user.id },
-            { status: BookingStatus.APPROVED }
+            { status: { in: [BookingStatus.PENDING, BookingStatus.APPROVED] }, endDate: { gt: new Date() } }
           ],
           status: statusFilter ?? undefined
         };
@@ -198,21 +176,19 @@ export async function GET(req: NextRequest) {
     take: safeTake
   });
 
-  const summaryBookings = bookings.map(({ requestedById, ...booking }, index) =>
-    requestedById === user.id
-      ? booking
-      : {
-          ...booking,
-          id: `house-booking-${index + 1}`
-        }
-  );
+  const summaryBookings = bookings.map(({ requestedById, requestedBy, ...booking }, index) => {
+    const displayName = sharedBookingName({ requestedBy });
+    if (requestedById === user.id) return { ...booking, displayName, isOwnBooking: true };
+    const { currency: _currency, totalAmount: _totalAmount, ...summary } = booking;
+    return { ...summary, displayName, isOwnBooking: false, id: `house-booking-${index + 1}` };
+  });
 
-  return NextResponse.json({ bookings: summaryBookings });
+  return NextResponse.json({ bookings: summaryBookings }, { headers: { "Cache-Control": "private, no-store", Vary: "Cookie" } });
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
     const parsed = createBookingSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -272,31 +248,25 @@ export async function POST(req: NextRequest) {
       ? BookingScope.WHOLE_HOUSE
       : payload.scope ?? BookingScope.WHOLE_HOUSE;
 
-    if (scope === BookingScope.ROOM_SPECIFIC && source === BookingSource.EXTERNAL_PUBLIC) {
+    if (source === BookingSource.EXTERNAL_PUBLIC && (payload.scope === BookingScope.ROOM_SPECIFIC || payload.roomAllocations?.length)) {
       return NextResponse.json(
         { error: "External bookings can only reserve the whole house" },
         { status: 400 }
       );
     }
 
-    const { feeConfig, seasonalRates } = await getActiveFeeConfig(startDate);
-    const feeBreakdown = calculateBookingFees(
-      {
-        source: source === BookingSource.EXTERNAL_PUBLIC ? "EXTERNAL_PUBLIC" : "INTERNAL",
-        startDate,
-        nights,
-        counts: payload.guestBreakdown
-      },
-      feeConfig,
-      seasonalRates
-    );
-
     const rawManageToken = generateBookingManageToken();
     const manageToken = hashBookingManageToken(rawManageToken);
 
-    const booking = await withBookingLock(async (tx) => {
+    const { booking, feeBreakdown } = await withBookingLock(async (tx) => {
       await assertReservation(tx, { startDate, endDate, scope, totalGuests, roomAllocations: payload.roomAllocations });
-      return tx.booking.create({
+      const quote = await quoteBooking({ source, startDate, nights, counts: payload.guestBreakdown }, tx);
+      const feeBreakdown = quote.breakdown;
+      if ((payload.quotedTotal !== undefined && Math.round(payload.quotedTotal * 100) !== Math.round(feeBreakdown.total * 100)) ||
+        (payload.quotedFeeConfigId !== undefined && payload.quotedFeeConfigId !== quote.feeConfigId)) {
+        throw new BookingRuleError("Pricing changed. Refresh your estimate before submitting again.", 409);
+      }
+      const booking = await tx.booking.create({
       data: {
         source,
         scope,
@@ -362,7 +332,7 @@ export async function POST(req: NextRequest) {
         }
       }
     });
-
+      return { booking, feeBreakdown };
     });
 
     const requesterEmail = booking.requestedBy?.email ?? booking.externalLeadEmail;

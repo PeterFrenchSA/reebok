@@ -1,6 +1,7 @@
 import type { UserRole } from "@prisma/client";
 
 export type AppPermission =
+  | "integrations:manage"
   | "booking:create:external"
   | "booking:create:family"
   | "booking:approve"
@@ -24,6 +25,7 @@ export type AppPermission =
 
 const permissionMap: Record<UserRole, Set<AppPermission>> = {
   SUPER_ADMIN: new Set<AppPermission>([
+    "integrations:manage",
     "app-feedback:manage",
     "booking:create:external",
     "booking:create:family",
@@ -46,6 +48,7 @@ const permissionMap: Record<UserRole, Set<AppPermission>> = {
     "feedback:internal"
   ]),
   ADMIN: new Set<AppPermission>([
+    "integrations:manage",
     "app-feedback:manage",
     "booking:create:external",
     "booking:create:family",

@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AdminAccommodationCorrection, CorrectableBooking } from "@/components/AdminAccommodationCorrection";
+import { AccommodationSummary, BookingAccommodationSummary } from "@/components/BookingRoomFields";
+import { BOOKINGS_CHANGED, notifyBookingsChanged } from "@/lib/booking-events";
 
 type BookingUser = {
   id?: string;
@@ -18,7 +21,9 @@ type BookingAuditLog = {
   actor?: BookingUser | null;
 };
 
-type Booking = {
+type Booking = CorrectableBooking & AccommodationSummary & {
+  displayName?: string;
+  isOwnBooking?: boolean;
   id: string;
   source: string;
   scope: string;
@@ -112,6 +117,9 @@ export function ActiveBookingsPanel({
 
   useEffect(() => {
     void loadBookings();
+    const refresh = () => void loadBookings();
+    window.addEventListener(BOOKINGS_CHANGED, refresh);
+    return () => window.removeEventListener(BOOKINGS_CHANGED, refresh);
   }, [loadBookings]);
 
   async function approve(bookingId: string) {
@@ -124,7 +132,7 @@ export function ActiveBookingsPanel({
         setState({ type: "error", message: errorMessage(data, "Approval failed.") });
         return;
       }
-      await loadBookings();
+      notifyBookingsChanged();
       setState({ type: "success", message: `Approved ${bookingId}.` });
     } catch (error) {
       console.error(error);
@@ -156,7 +164,7 @@ export function ActiveBookingsPanel({
       }
 
       setCommentDrafts((current) => ({ ...current, [bookingId]: "" }));
-      await loadBookings();
+      notifyBookingsChanged();
       setState({ type: "success", message: "Comment added to booking trail." });
     } catch (error) {
       console.error(error);
@@ -188,7 +196,7 @@ export function ActiveBookingsPanel({
       }
 
       setRejectDrafts((current) => ({ ...current, [bookingId]: "" }));
-      await loadBookings();
+      notifyBookingsChanged();
       setState({ type: "success", message: `Rejected ${bookingId}.` });
     } catch (error) {
       console.error(error);
@@ -233,15 +241,18 @@ export function ActiveBookingsPanel({
                 <span className="lead">{dateLabel(booking.startDate)} to {dateLabel(booking.endDate)}</span>
               </div>
               <p className="lead">
-                Guests: {booking.totalGuests} | {moneyLabel(booking.currency, booking.totalAmount)} | {booking.source}
+                Guests: {booking.totalGuests}{adminMode || booking.isOwnBooking ? ` | Estimate: ${moneyLabel(booking.currency, booking.totalAmount)}` : ""}
               </p>
+              {!adminMode && <p><strong>{booking.displayName ?? "House stay"}</strong>{booking.isOwnBooking ? " (your booking)" : ""}</p>}
               <p className="lead">Pets: {booking.petCount ?? 0}</p>
+              <BookingAccommodationSummary booking={booking} />
               {adminMode ? (
                 <>
                   <p className="lead">
                     Requester: {requester} ({requestEmail})
                   </p>
                   <p className="lead">Reference: {booking.id}</p>
+                  <AdminAccommodationCorrection booking={booking} onSaved={notifyBookingsChanged} />
                   {booking.notes ? <p className="lead">Notes: {booking.notes}</p> : null}
                   {booking.rejectionReason ? <p className="notice error">Latest rejection: {booking.rejectionReason}</p> : null}
 

@@ -28,7 +28,7 @@ function asNumber(value: unknown): number {
 }
 
 function isDateInSeason(date: Date, rate: SeasonalRate): boolean {
-  const monthDay = date.getMonth() + 1 + date.getDate() / 100;
+  const monthDay = date.getUTCMonth() + 1 + date.getUTCDate() / 100;
   const seasonStart = rate.startMonth + rate.startDay / 100;
   const seasonEnd = rate.endMonth + rate.endDay / 100;
 
@@ -43,7 +43,7 @@ function isDateInSeason(date: Date, rate: SeasonalRate): boolean {
 function pickSeasonalRate(date: Date, seasonalRates: SeasonalRate[]): SeasonalRate | undefined {
   return seasonalRates
     .filter((rate) => rate.enabled && isDateInSeason(date, rate))
-    .sort((a, b) => b.priority - a.priority)[0];
+    .sort((a, b) => b.priority - a.priority || a.name.localeCompare(b.name) || a.id.localeCompare(b.id))[0];
 }
 
 export function calculateBookingFees(
@@ -89,24 +89,21 @@ export function calculateBookingFees(
       }
     );
   } else {
-    const activeSeason = pickSeasonalRate(input.startDate, seasonalRates);
-    const adultRate = activeSeason
-      ? asNumber(activeSeason.externalAdultNightRate)
-      : asNumber(feeConfig.externalAdultNightRate);
-    const childRate = activeSeason
-      ? asNumber(activeSeason.externalChildNightRate)
-      : asNumber(feeConfig.externalChildNightRate);
-
-    items.push(
-      {
-        label: "External visitors (adult)",
-        amount: adultRate * input.counts.visitorAdult * nights
-      },
-      {
-        label: "External visitors (child under 6)",
-        amount: childRate * input.counts.visitorChildUnder6 * nights
-      }
-    );
+    const seasons = new Map<string, { name: string; nights: number; adult: number; child: number }>();
+    for (let night = 0; night < nights; night++) {
+      const date = new Date(input.startDate.getTime() + night * 86400000);
+      const season = pickSeasonalRate(date, seasonalRates);
+      const key = season?.id ?? "standard";
+      const group = seasons.get(key) ?? { name: season?.name ?? "Standard", nights: 0,
+        adult: asNumber(season?.externalAdultNightRate ?? feeConfig.externalAdultNightRate),
+        child: asNumber(season?.externalChildNightRate ?? feeConfig.externalChildNightRate) };
+      group.nights++;
+      seasons.set(key, group);
+    }
+    for (const rate of seasons.values()) {
+      items.push({ label: `External adults - ${rate.name} (${rate.nights} nights)`, amount: rate.adult * input.counts.visitorAdult * rate.nights },
+        { label: `Children under 6 - ${rate.name} (${rate.nights} nights)`, amount: rate.child * input.counts.visitorChildUnder6 * rate.nights });
+    }
 
     const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
     const minWholeHouse = asNumber(feeConfig.externalWholeHouseMinRate);
@@ -120,15 +117,15 @@ export function calculateBookingFees(
 
     return {
       lineItems: items,
-      total: items.reduce((sum, item) => sum + item.amount, 0),
+      total: Math.round(items.reduce((sum, item) => sum + item.amount, 0) * 100) / 100,
       currency: feeConfig.currency,
-      effectiveRateName: activeSeason?.name
+      effectiveRateName: [...seasons.values()].map((rate) => rate.name).join(", ")
     };
   }
 
   return {
     lineItems: items,
-    total: items.reduce((sum, item) => sum + item.amount, 0),
+    total: Math.round(items.reduce((sum, item) => sum + item.amount, 0) * 100) / 100,
     currency: feeConfig.currency
   };
 }

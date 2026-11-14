@@ -122,10 +122,12 @@ export function BookingRequestPage() {
   }
 
   return (
-    <section className="grid grid-2">
+    <section className="grid">
+      <header className="card coastal-hero grid"><span className="kicker">Reebok, together</span><h1>Make time for a stay by the sea.</h1><p className="lead">A family house, shared memories and room to unwind. Start with your dates; we will take care of the request.</p></header>
+      <div className="public-booking-layout">
       <article className="card grid">
         <span className="kicker">Booking Request</span>
-        <h1>Book The Reebok House</h1>
+        <h2>Plan your whole-house stay</h2>
         <p className="lead">
           Start with your booking details below. External visitors request whole-house stays and every
           booking is reviewed by admin before confirmation.
@@ -204,6 +206,7 @@ export function BookingRequestPage() {
           <button type="submit" className="btn-primary" disabled={isSubmitting}>
             {isSubmitting ? "Submitting..." : "Submit Booking Request"}
           </button>
+          {submission.type !== "idle" && <div className={`notice ${submission.type === "success" ? "success" : "error"}`} role="status"><p>{submission.message}</p>{submission.bookingId && <p>Reference: {submission.bookingId}</p>}{submission.estimate && <p>Estimated total: {submission.estimate}</p>}</div>}
         </form>
       </article>
 
@@ -235,10 +238,10 @@ export function BookingRequestPage() {
         ) : null}
 
         <article className="card grid">
-          <h2>Member and Admin</h2>
+          <h2>Part of the family?</h2>
           <ul className="list">
-            <li>Members can sign in and use `/member` for booking history.</li>
-            <li>Admins can sign in and use `/admin` to manage users and credentials.</li>
+            <li><a href="/member/book">Members: sign in to book rooms or the whole house at member rates.</a></li>
+            <li>Already registered? Your family portal has your bookings, fees and house updates.</li>
           </ul>
         </article>
 
@@ -269,18 +272,8 @@ export function BookingRequestPage() {
           </div>
         </article>
 
-        {submission.type !== "idle" ? (
-          <article
-            className={`notice ${submission.type === "success" ? "success" : "error"}`}
-            role="status"
-            aria-live="polite"
-          >
-            <p>{submission.message}</p>
-            {submission.bookingId ? <p>Reference: {submission.bookingId}</p> : null}
-            {submission.estimate ? <p>Estimated total: {submission.estimate}</p> : null}
-          </article>
-        ) : null}
       </aside>
+      </div>
     </section>
   );
 }

@@ -50,7 +50,7 @@ export function MemberFeeTracker() {
     setLoading(true);
     setState({ type: "idle" });
     try {
-      const response = await fetch("/api/subscriptions", { cache: "no-store" });
+      const response = await fetch("/api/subscriptions?mineOnly=true", { cache: "no-store" });
       const data = (await response.json()) as { subscriptions?: Subscription[]; error?: unknown };
 
       if (!response.ok) {

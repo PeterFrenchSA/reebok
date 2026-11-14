@@ -1,4 +1,6 @@
 "use client";
+import { AccommodationSummary, BookingAccommodationSummary } from "@/components/BookingRoomFields";
+import { BOOKINGS_CHANGED } from "@/lib/booking-events";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -11,7 +13,7 @@ type BookingAuditLog = {
   actor?: { name?: string | null; email?: string | null } | null;
 };
 
-type Booking = {
+type Booking = AccommodationSummary & {
   id: string;
   status: string;
   source: string;
@@ -97,6 +99,9 @@ export function AdminBookingHistory() {
 
   useEffect(() => {
     void loadHistory();
+    const refresh = () => void loadHistory();
+    window.addEventListener(BOOKINGS_CHANGED, refresh);
+    return () => window.removeEventListener(BOOKINGS_CHANGED, refresh);
   }, [loadHistory]);
 
   if (loading) {
@@ -145,6 +150,7 @@ export function AdminBookingHistory() {
               <p className="lead">Reviewed by: {booking.approvedBy?.name ?? "Not reviewed"}</p>
               {booking.rejectionReason ? <p className="notice error">Rejection reason: {booking.rejectionReason}</p> : null}
               <div className="audit-trail">
+                <BookingAccommodationSummary booking={booking} />
                 <strong>Audit Trail</strong>
                 {(booking.bookingAuditLogs ?? []).length === 0 ? (
                   <p className="lead">No audit entries.</p>

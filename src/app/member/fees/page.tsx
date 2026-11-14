@@ -1,0 +1,2 @@
+import { MemberFeeTracker } from "@/components/MemberFeeTracker";
+export default function MyFeesPage() { return <section className="grid"><header className="card coastal-hero grid"><span className="kicker">Our shared home</span><h1>My fees</h1><p className="lead">Your recorded contributions and reminder preferences. Contact an admin if a payment is missing.</p></header><MemberFeeTracker /></section>; }

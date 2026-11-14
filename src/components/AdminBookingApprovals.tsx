@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AdminAccommodationCorrection, CorrectableBooking } from "@/components/AdminAccommodationCorrection";
+import { AccommodationSummary, BookingAccommodationSummary } from "@/components/BookingRoomFields";
+import { BOOKINGS_CHANGED, notifyBookingsChanged } from "@/lib/booking-events";
 
 type BookingUser = {
   name: string;
   email: string;
 };
 
-type Booking = {
+type Booking = CorrectableBooking & AccommodationSummary & {
   id: string;
   source: string;
   scope: string;
@@ -75,6 +78,9 @@ export function AdminBookingApprovals() {
 
   useEffect(() => {
     void loadPendingBookings();
+    const refresh = () => void loadPendingBookings();
+    window.addEventListener(BOOKINGS_CHANGED, refresh);
+    return () => window.removeEventListener(BOOKINGS_CHANGED, refresh);
   }, [loadPendingBookings]);
 
   async function approveBooking(bookingId: string) {
@@ -92,6 +98,7 @@ export function AdminBookingApprovals() {
       }
 
       setBookings((current) => current.filter((booking) => booking.id !== bookingId));
+      notifyBookingsChanged();
       setState({ type: "success", message: `Approved booking ${bookingId}.` });
     } catch (error) {
       console.error(error);
@@ -129,6 +136,7 @@ export function AdminBookingApprovals() {
         delete next[bookingId];
         return next;
       });
+      notifyBookingsChanged();
       setState({ type: "success", message: `Rejected booking ${bookingId}.` });
     } catch (error) {
       console.error(error);
@@ -174,6 +182,8 @@ export function AdminBookingApprovals() {
               </p>
               {booking.notes ? <p className="lead">Notes: {booking.notes}</p> : null}
               <p className="lead">Reference: {booking.id}</p>
+              <BookingAccommodationSummary booking={booking} />
+              <AdminAccommodationCorrection booking={booking} onSaved={notifyBookingsChanged} />
 
               <div className="field">
                 <label htmlFor={`reject-${booking.id}`}>Rejection reason</label>

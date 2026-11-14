@@ -1,22 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CalendarAvailability, CalendarBooking, roomHolds, RoomOption } from "@/lib/booking-options";
 
-type AvailabilityBooking = {
-  id: string;
-  status: "PENDING" | "APPROVED" | string;
-  startDate: string;
-  endDate: string;
-};
+type AvailabilityBooking = CalendarBooking;
 
 type SelectionMode = "start" | "end";
-type NightStatus = "available" | "tentative" | "confirmed" | "past";
+type NightStatus = "available" | "partial" | "tentative" | "confirmed" | "past";
 
 type Props = {
   startDate: string;
   endDate: string;
   onStartDateChange: (value: string) => void;
   onEndDateChange: (value: string) => void;
+  memberMode?: boolean;
+  scope?: "WHOLE_HOUSE" | "ROOM_SPECIFIC";
+  roomIds?: string[];
+  refreshKey?: number;
+  onAvailabilityLoaded?: (data: CalendarAvailability) => void;
 };
 
 function startOfDay(value: Date): Date {
@@ -59,8 +60,10 @@ const monthFormatter = new Intl.DateTimeFormat("en-US", { month: "long", year: "
 const shortDateFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
 const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDateChange }: Props) {
+export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDateChange, memberMode = false,
+  scope = "WHOLE_HOUSE", roomIds = [], refreshKey = 0, onAvailabilityLoaded }: Props) {
   const [bookings, setBookings] = useState<AvailabilityBooking[]>([]);
+  const [rooms, setRooms] = useState<RoomOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [horizon, setHorizon] = useState<string | null>(null);
   const [propertyDate, setPropertyDate] = useState<string | null>(null);
@@ -80,23 +83,22 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
   const selectedStart = useMemo(() => (startDate ? parseIsoDate(startDate) : null), [startDate]);
   const selectedEnd = useMemo(() => (endDate ? parseIsoDate(endDate) : null), [endDate]);
 
-  const ranges = useMemo(
-    () =>
-      bookings.map((booking) => ({
+  const filteredBookings = memberMode && scope === "ROOM_SPECIFIC" && roomIds.length
+    ? bookings.filter((b) => b.scope !== "ROOM_SPECIFIC" || !b.roomIds?.length || b.roomIds.some((id) => roomIds.includes(id))) : bookings;
+  const ranges = filteredBookings.map((booking) => ({
         status: booking.status,
         start: parseIsoDate(booking.startDate.slice(0, 10)),
         end: parseIsoDate(booking.endDate.slice(0, 10))
-      })),
-    [bookings]
-  );
+      }));
 
   useEffect(() => {
+    const controller = new AbortController();
     async function loadAvailability() {
       setLoading(true);
       setLoadError(null);
       try {
-        const response = await fetch("/api/bookings/availability", { cache: "no-store" });
-        const data = (await response.json()) as { bookings?: AvailabilityBooking[]; error?: unknown; horizon?: string; today?: string };
+        const response = await fetch(`/api/bookings/availability${memberMode ? "?mode=member" : ""}`, { cache: "no-store", signal: controller.signal });
+        const data = (await response.json()) as CalendarAvailability & { error?: unknown };
         if (!response.ok) {
           setLoadError(typeof data.error === "string" ? data.error : "Could not load availability.");
           return;
@@ -104,16 +106,18 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
         setBookings(data.bookings ?? []);
         setHorizon(data.horizon ?? null);
         setPropertyDate(data.today ?? null);
+        setRooms(data.rooms ?? []);
+        onAvailabilityLoaded?.(data);
       } catch (error) {
-        console.error(error);
-        setLoadError("Could not load availability.");
+        if (!controller.signal.aborted) setLoadError("Could not load availability. Refresh the page to retry.");
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
     void loadAvailability();
-  }, []);
+    return () => controller.abort();
+  }, [memberMode, refreshKey, onAvailabilityLoaded]);
 
   useEffect(() => {
     setSelectionMode(startDate && !endDate ? "end" : "start");
@@ -122,6 +126,12 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
   function statusForNight(day: Date): NightStatus {
     if (day < today) {
       return "past";
+    }
+    if (memberMode && scope === "ROOM_SPECIFIC" && !roomIds.length) {
+      const start = toIsoDate(day), end = toIsoDate(addDays(day, 1));
+      const available = rooms.filter((room) => !roomHolds(bookings, start, end, room.id).length).length;
+      if (available > 0) return available === rooms.length ? "available" : "partial";
+      return roomHolds(bookings, start, end).some((b) => b.status === "APPROVED") ? "confirmed" : "tentative";
     }
 
     let tentative = false;
@@ -140,6 +150,10 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
   }
 
   function conflictInRange(start: Date, end: Date): "confirmed" | "tentative" | null {
+    if (memberMode && scope === "ROOM_SPECIFIC" && !roomIds.length) {
+      if (rooms.some((room) => !roomHolds(bookings, toIsoDate(start), toIsoDate(end), room.id).length)) return null;
+      return roomHolds(bookings, toIsoDate(start), toIsoDate(end)).some((b) => b.status === "APPROVED") ? "confirmed" : "tentative";
+    }
     for (let cursor = startOfDay(start); cursor < end; cursor = addDays(cursor, 1)) {
       const status = statusForNight(cursor);
       if (status === "confirmed") {
@@ -153,7 +167,7 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
   }
 
   function canSelectStart(day: Date): boolean {
-    return Boolean(horizon && toIsoDate(day) < horizon && statusForNight(day) === "available");
+    return Boolean(horizon && toIsoDate(day) < horizon && ["available", "partial"].includes(statusForNight(day)));
   }
 
   function canSelectEnd(day: Date): boolean {
@@ -249,6 +263,7 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
           <span className="legend-dot legend-dot-available" />
           Available
         </span>
+        {memberMode && scope === "ROOM_SPECIFIC" && <span className="legend-item"><span className="legend-dot legend-dot-partial" />Some rooms available</span>}
         <span className="legend-item">
           <span className="legend-dot legend-dot-confirmed" />
           Confirmed booking
@@ -258,6 +273,7 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
           Tentative booking
         </span>
       </div>
+      {memberMode && <p className="lead">{scope === "WHOLE_HOUSE" ? "Exclusive stay: any pending or confirmed room reservation blocks the house." : roomIds.length ? "Calendar shows availability for your selected rooms." : "Shared family stay: dates remain selectable while at least one room is free for the entire stay. Choose rooms below."}</p>}
 
       <div className="booking-calendar-selection">
         <p className="lead">
@@ -319,6 +335,7 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
                       outside ? "is-outside" : "",
                       visualStatus === "confirmed" ? "is-confirmed" : "",
                       visualStatus === "tentative" ? "is-tentative" : "",
+                      visualStatus === "partial" ? "is-partial" : "",
                       visualStatus === "past" ? "is-past" : "",
                       isStart ? "is-start" : "",
                       isEnd ? "is-end" : "",
@@ -335,6 +352,7 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
                       if (status === "confirmed") {
                         return "Confirmed booking";
                       }
+                      if (status === "partial") return "Some rooms available";
                       if (status === "tentative") {
                         return "Tentative booking awaiting approval";
                       }
