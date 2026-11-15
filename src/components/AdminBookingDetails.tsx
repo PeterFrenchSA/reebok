@@ -5,6 +5,7 @@ import { AdminAccommodationCorrection, CorrectableBooking } from "./AdminAccommo
 import { AccommodationSummary, BookingAccommodationSummary } from "./BookingRoomFields";
 import { notifyBookingsChanged } from "@/lib/booking-events";
 import type { FeeBreakdown } from "@/lib/fees";
+import { dateAfterNights, maxStayNights, stayLengthMessage } from "@/lib/stay-limits";
 
 type Detail = CorrectableBooking & AccommodationSummary & {
   status: string; notes?: string | null; petCount: number; rejectionReason?: string | null;
@@ -82,19 +83,21 @@ function DateChange({ booking }: { booking: Detail }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const nights = (Date.parse(end) - Date.parse(start)) / 86400000;
+  const maxNights = maxStayNights(booking.source);
+  const validLength = Number.isInteger(nights) && nights >= 1 && nights <= maxNights;
   const key = JSON.stringify({ source: booking.source, startDate: start, nights, counts: booking.guestBreakdown });
   useEffect(() => {
     const controller = new AbortController(); setQuote(null); setError("");
-    if (!start || !end || nights < 1 || nights > 90) return () => controller.abort();
+    if (!start || !end || !validLength) return () => controller.abort();
     const timer = setTimeout(() => {
       fetch("/api/fees/calculate", { method: "POST", headers: { "Content-Type": "application/json" }, body: key, signal: controller.signal })
         .then(async (r) => { const data = await r.json(); if (!r.ok) throw new Error(typeof data.error === "string" ? data.error : "Could not quote these dates."); if (!controller.signal.aborted) setQuote({ ...data, key }); })
         .catch((e) => { if (!controller.signal.aborted) setError(e.message); });
     }, 250);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [key, start, end, nights]);
+  }, [key, start, end, validLength]);
   async function save(event: FormEvent) {
-    event.preventDefault(); if (!quote || quote.key !== key || busy) return;
+    event.preventDefault(); if (!validLength || !quote || quote.key !== key || busy) return;
     setBusy(true); setError("");
     try {
       const response = await fetch(`/api/bookings/${booking.id}/dates`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
@@ -109,11 +112,12 @@ function DateChange({ booking }: { booking: Detail }) {
     <p className="notice">Rooms and guest categories stay unchanged. Saving checks availability, recalculates the estimate, records your reason and resets approval. Notify the family directly; no rescheduling email is sent.</p>
     <fieldset className="booking-fieldset grid" disabled={busy}>
       <div className="grid grid-2"><div className="field"><label htmlFor="reschedule-start">New check-in</label><input id="reschedule-start" type="date" required value={start} onChange={(e) => setStart(e.target.value)} /></div>
-        <div className="field"><label htmlFor="reschedule-end">New check-out</label><input id="reschedule-end" type="date" required min={start} value={end} onChange={(e) => setEnd(e.target.value)} /></div></div>
+        <div className="field"><label htmlFor="reschedule-end">New check-out</label><input id="reschedule-end" type="date" required min={dateAfterNights(start, 1)} max={dateAfterNights(start, maxNights)} value={end} onChange={(e) => setEnd(e.target.value)} /></div></div>
+      <p className={validLength ? "lead" : "notice error"}>{stayLengthMessage(booking.source)} Existing records are not shortened automatically.</p>
       {quote?.key === key && <p><strong>Revised estimate: {quote.breakdown.currency} {quote.breakdown.total.toFixed(2)}</strong></p>}
       <div className="field"><label htmlFor="reschedule-reason">Reason and family agreement</label><textarea id="reschedule-reason" required minLength={5} maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} /></div>
       {error && <p className="notice error" role="alert">{error}</p>}
-      <button className="btn-primary" disabled={!quote || quote.key !== key || (start === booking.startDate.slice(0, 10) && end === booking.endDate.slice(0, 10))}>Confirm new dates and reset approval</button>
+      <button className="btn-primary" disabled={!validLength || !quote || quote.key !== key || (start === booking.startDate.slice(0, 10) && end === booking.endDate.slice(0, 10))}>Confirm new dates and reset approval</button>
     </fieldset>
   </form>;
 }

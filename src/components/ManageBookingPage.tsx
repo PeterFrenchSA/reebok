@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { AccommodationSummary, BookingAccommodationSummary } from "@/components/BookingRoomFields";
+import { dateAfterNights, maxStayNights, stayLengthMessage } from "@/lib/stay-limits";
 
 type Booking = AccommodationSummary & {
   id: string;
@@ -64,6 +65,9 @@ export function ManageBookingPage({ initialReference = "", initialToken = "", in
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [state, setState] = useState<UiState>({ type: "idle" });
+  const maxNights = maxStayNights(booking?.source ?? "EXTERNAL_PUBLIC");
+  const nights = (Date.parse(endDate) - Date.parse(startDate)) / 86400000;
+  const validLength = Number.isInteger(nights) && nights >= 1 && nights <= maxNights;
 
   useEffect(() => {
     if (!initialReference) {
@@ -123,6 +127,10 @@ export function ManageBookingPage({ initialReference = "", initialToken = "", in
 
   async function saveBooking() {
     if (!booking) {
+      return;
+    }
+    if (!validLength) {
+      setState({ type: "error", message: stayLengthMessage(booking.source) });
       return;
     }
 
@@ -238,6 +246,8 @@ export function ManageBookingPage({ initialReference = "", initialToken = "", in
               <input
                 id="manage-end-date"
                 type="date"
+                min={dateAfterNights(startDate, 1)}
+                max={dateAfterNights(startDate, maxNights)}
                 value={endDate}
                 onChange={(event) => setEndDate(event.target.value)}
               />
@@ -303,10 +313,11 @@ export function ManageBookingPage({ initialReference = "", initialToken = "", in
             Current total: {booking.currency} {Number(booking.totalAmount ?? 0).toFixed(2)}
           </p>
           <BookingAccommodationSummary booking={booking} />
+          <p className={validLength ? "lead" : "notice error"}>{stayLengthMessage(booking.source)} Existing longer stays remain recorded, but must be shortened before saving changes.</p>
           <p className="lead">To change rooms or guest categories, contact an administrator. Date changes retain your room allocation and are checked against other reservations.</p>
 
           <div className="action-row">
-            <button type="button" className="btn-primary" disabled={saving} onClick={() => void saveBooking()}>
+            <button type="button" className="btn-primary" disabled={saving || !validLength} onClick={() => void saveBooking()}>
               {saving ? "Saving..." : "Save Changes"}
             </button>
           </div>

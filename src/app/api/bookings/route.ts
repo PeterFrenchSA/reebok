@@ -259,7 +259,7 @@ export async function POST(req: NextRequest) {
     const manageToken = hashBookingManageToken(rawManageToken);
 
     const { booking, feeBreakdown } = await withBookingLock(async (tx) => {
-      await assertReservation(tx, { startDate, endDate, scope, totalGuests, roomAllocations: payload.roomAllocations });
+      await assertReservation(tx, { source, startDate, endDate, scope, totalGuests, roomAllocations: payload.roomAllocations });
       const quote = await quoteBooking({ source, startDate, nights, counts: payload.guestBreakdown }, tx);
       const feeBreakdown = quote.breakdown;
       if ((payload.quotedTotal !== undefined && Math.round(payload.quotedTotal * 100) !== Math.round(feeBreakdown.total * 100)) ||

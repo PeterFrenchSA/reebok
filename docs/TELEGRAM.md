@@ -20,9 +20,11 @@ rules or adding an AI dependency.
 - A session-authenticated `GET /api/v1/availability` website API. Telegram calls
   the same service through its verified webhook, not through administrator cookies.
 
-Current operating limits: 1-90 nights, from today to 548 days ahead. These are
-explicit application limits, not Telegram limits. The website calendar uses the
-same horizon. Changing these defaults requires updating and testing the shared rules.
+Current member/family operating limits: 1-10 nights per booking, from today to
+548 days ahead, including admins using member rates. Telegram and the member
+availability API enforce this same limit. Public guest bookings retain 1-90 nights.
+These are application limits, not Telegram limits; see `src/lib/stay-limits.ts`.
+Separate bookings are not combined into a cumulative stay allowance.
 
 ## Deployment Prerequisites
 

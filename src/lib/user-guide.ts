@@ -24,7 +24,7 @@ export const guideSections: GuideSection[] = [
       "Review the pet notice when bringing pets. The default rule is that the property is pet friendly, but furniture and bedrooms are not; admins may customise this notice.",
       "Submit once and keep the reference and estimated total. A pending request holds the accommodation until an administrator acts; it does not automatically expire.",
       "Whole-house requests conflict with every room reservation. Room-specific requests conflict with the same rooms, but different rooms may overlap. Checkout is exclusive, so the next stay may begin on the previous checkout date.",
-      "The current availability window is 1-90 nights, up to 548 days ahead. Pending and confirmed reservations are distinguished in the calendar, but both prevent conflicting requests."
+      "Member/family bookings allow 1-10 nights, including admins using member rates; guest bookings retain 1-90 nights. These are per-booking limits, not a combined allowance across separate bookings. Dates must be within 548 days ahead. Pending and confirmed reservations look different in the calendar, but both prevent conflicting requests."
     ],
     caution: "Whole-house means exclusive use and blocks every room, even for a small party. Some rooms available does not mean every room is free. Room 5 is limited to two guests until its extra bed is confirmed. If an old family booking blocks the whole house incorrectly, ask an admin to correct its allocation; never assume it has been converted automatically."
   },
@@ -36,6 +36,7 @@ export const guideSections: GuideSection[] = [
       "Alternatively open Manage by Reference and supply the reference and matching email. For an unsigned-in visitor, this requests an emailed private link; the reference/email combination does not grant direct access.",
       "Open the private link to review dates, guest total, pets, notes and lead contact details. Keep this link confidential.",
       "Save an edit only when ready. Saving returns the booking to Pending and clears any previous approval, including note-only changes. The accommodation is checked for conflicts again.",
+      "Existing longer stays are not automatically shortened or cancelled. A member/family stay over 10 nights must be shortened before saving changes or receiving a new approval; contact an admin if you need help.",
       "Date changes may recalculate the estimate using current rates. Note-only edits preserve the amount. A guest-count change requiring a new guest-category breakdown, or an older booking without that breakdown, needs admin assistance or a new request.",
       "To withdraw a request or cancel a stay, contact an admin. There is no dedicated self-service cancellation button. Do not assume changing a note cancels a booking; ask the admin to reject/release it and verify the status."
     ],
@@ -47,7 +48,7 @@ export const guideSections: GuideSection[] = [
     steps: [
       "Open Approvals & history and review Pending Approvals at the top, or select a stay in Booking calendar. Check dates, room allocations, guest categories, pets, notes and the proposed amount.",
       "For a future family stay entered with the wrong accommodation, expand Correct member accommodation / release unused rooms. Confirm the family agrees, select rooms or the whole house, check the categories and revised estimate, and record a reason. This retains the party size and dates, recalculates member pricing, logs the correction and returns the booking to Pending. Notify the family directly: the correction itself sends no email. Public bookings can be converted only when owned by an active member account.",
-      "Approve an acceptable request. The server checks for conflicts before recording approval. Approval confirms the reservation; it is not confirmation of payment.",
+      "Approve an acceptable request. The server checks conflicts and stay length before recording approval. Member/family stays have a 10-night cap with no admin override; guest stays retain 90 nights. Shorten longer member stays through Change dates before approval or accommodation correction. Approval confirms the reservation, not payment.",
       "Use the booking's comment action to record a clarification. To decline a request or reject an existing booking, enter a clear reason and use Reject.",
       "Rejected bookings release their accommodation and should appear in History & Audit Trail rather than the active list. Expand a history entry to read its creation, approval, rejection and comment records.",
       "Open House notices & booking settings from Approvals & history to update the pet notice and My Stay Useful Info title/body. Replace example contact numbers with verified ones; one notice-board item is shown for each non-empty line."

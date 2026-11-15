@@ -7,6 +7,7 @@ import { MemberGuestCounts, RoomSelection } from "@/components/BookingRoomFields
 import { CalendarAvailability, emptyMemberCounts, MemberCounts, RoomAllocation, roomHolds } from "@/lib/booking-options";
 import { DEFAULT_PET_NOTICE } from "@/lib/booking-policy";
 import type { FeeBreakdown } from "@/lib/fees";
+import { MEMBER_MAX_STAY_NIGHTS } from "@/lib/stay-limits";
 
 type Quote = { breakdown: FeeBreakdown; feeConfigId: string; key: string };
 export function MemberBookingPage({ name = "", email = "" }: { name?: string; email?: string }) {
@@ -34,7 +35,7 @@ export function MemberBookingPage({ name = "", email = "" }: { name?: string; em
   const rooms = availability?.rooms ?? [];
   const selectedRooms = rooms.filter((room) => allocations.some((item) => item.roomId === room.id));
   const allocated = allocations.reduce((sum, item) => sum + item.guestCount, 0);
-  const datesReady = nights >= 1 && nights <= 90;
+  const datesReady = nights >= 1 && nights <= MEMBER_MAX_STAY_NIGHTS;
   const capacity = (scope === "WHOLE_HOUSE" ? rooms : selectedRooms).reduce((sum, room) => sum + room.capacity, 0);
   const conflict = datesReady && (scope === "WHOLE_HOUSE" ? roomHolds(availability?.bookings ?? [], startDate, endDate).length > 0
     : allocations.some((item) => roomHolds(availability?.bookings ?? [], startDate, endDate, item.roomId).length > 0));
@@ -83,7 +84,7 @@ export function MemberBookingPage({ name = "", email = "" }: { name?: string; em
   return <section className="grid member-booking-page">
     <header className="card grid member-booking-hero"><span className="kicker">Family stays</span><h1>Make room for everyone</h1>
       <p>Book a room, a few rooms, or an exclusive whole-house stay at the published member rates.</p>
-      <p className="lead">Separate family bookings can share the same dates in different rooms. Every request needs admin approval.</p>
+      <p className="lead">Separate family bookings can share the same dates in different rooms. Member/family stays are limited to {MEMBER_MAX_STAY_NIGHTS} nights per booking. Every request needs admin approval.</p>
       <Link href="/member">Back to Member Console</Link>
     </header>
     {reference ? <section className="card grid notice success" role="status"><h2>Request received</h2><p>Your accommodation is held pending approval. Reference: <strong>{reference}</strong></p>

@@ -1,9 +1,9 @@
-import { BookingScope, BookingStatus, Prisma } from "@prisma/client";
+import { BookingScope, BookingSource, BookingStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { maxStayNights, stayLengthMessage } from "@/lib/stay-limits";
 
 export const PROPERTY_TIMEZONE = "Africa/Johannesburg";
-export const MAX_STAY_NIGHTS = 90;
 const DAY = 86_400_000;
 export const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
   const date = new Date(`${value}T00:00:00Z`);
@@ -27,10 +27,14 @@ export class BookingRuleError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
 
-export function validateStay(start: string, end: string, today = propertyToday()) {
+export function assertStayLength(nights: number, source: BookingSource) {
+  if (!Number.isInteger(nights) || nights < 1 || nights > maxStayNights(source)) throw new BookingRuleError(stayLengthMessage(source));
+}
+
+export function validateStay(start: string, end: string, today = propertyToday(), source: BookingSource = BookingSource.INTERNAL) {
   if (!dateOnly.safeParse(start).success || !dateOnly.safeParse(end).success) throw new BookingRuleError("Use real dates in YYYY-MM-DD format.");
   const nights = (dateValue(end).getTime() - dateValue(start).getTime()) / DAY;
-  if (nights < 1 || nights > MAX_STAY_NIGHTS) throw new BookingRuleError(`Choose between 1 and ${MAX_STAY_NIGHTS} nights.`);
+  assertStayLength(nights, source);
   if (start < today || end > bookingHorizon(today)) throw new BookingRuleError("Dates must be between today and the published booking horizon.");
   return nights;
 }
@@ -79,12 +83,14 @@ export async function withBookingLock<T>(work: (tx: Prisma.TransactionClient) =>
 }
 
 export async function assertReservation(tx: Prisma.TransactionClient, input: {
-  id?: string; startDate: Date; endDate: Date; scope: BookingScope; totalGuests: number;
+  id?: string; source: BookingSource; startDate: Date; endDate: Date; scope: BookingScope; totalGuests: number;
   roomAllocations?: Array<{ roomId: string; guestCount: number }>; allowHistorical?: boolean;
 }) {
   if (input.allowHistorical) {
     if (input.endDate <= input.startDate) throw new BookingRuleError("Check-out must be after check-in.");
-  } else validateStay(input.startDate.toISOString().slice(0, 10), input.endDate.toISOString().slice(0, 10));
+    // Past imports retain their history; active/current imports cannot bypass stay limits.
+    if (input.endDate > dateValue(propertyToday())) assertStayLength((input.endDate.getTime() - input.startDate.getTime()) / DAY, input.source);
+  } else validateStay(input.startDate.toISOString().slice(0, 10), input.endDate.toISOString().slice(0, 10), propertyToday(), input.source);
   const allocations = input.roomAllocations ?? [];
   if (!Number.isInteger(input.totalGuests) || input.totalGuests < 1 || input.totalGuests > 50) throw new BookingRuleError("Choose between 1 and 50 guests.");
   if (input.scope === BookingScope.WHOLE_HOUSE) {

@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
 
       if (safeScope === BookingScope.ROOM_SPECIFIC) throw new BookingRuleError("Room bookings must be allocated through the booking workflow, not CSV import.");
       if (endDate <= startDate) throw new BookingRuleError("Imported check-out must be after check-in.");
-      if ([BookingStatus.PENDING, BookingStatus.APPROVED].some((status) => status === safeStatus)) await assertReservation(tx, { startDate, endDate, scope: safeScope, totalGuests: Math.max(1, Math.round(parseNumber(row.totalGuests, 1))), allowHistorical: true });
+      if ([BookingStatus.PENDING, BookingStatus.APPROVED].some((status) => status === safeStatus)) await assertReservation(tx, { source: safeSource, startDate, endDate, scope: safeScope, totalGuests: Math.max(1, Math.round(parseNumber(row.totalGuests, 1))), allowHistorical: true });
       await tx.booking.create({
         data: {
           source: safeSource,

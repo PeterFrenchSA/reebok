@@ -128,6 +128,7 @@ These are important and should be preserved unless there is a deliberate redesig
 
 10. Availability and Telegram
 - Pending and approved bookings both block their accommodation; room bookings may overlap only in different rooms.
+- Member/family (`INTERNAL`) stays are capped at 10 nights per booking, including admin member-rate stays; guest/external stays retain 90 nights. Reuse `src/lib/stay-limits.ts` in UI and shared server checks. No admin override or cumulative cross-booking limit exists. Existing records remain intact, but edits/approval/conversion must satisfy the cap; only entirely past historical imports are exempt.
 - All availability-changing writes must use `withBookingLock` and the shared reservation checks in `src/lib/availability.ts`, including imports.
 - Telegram is read-only availability, without an AI model or booking mutations.
 - Verify the webhook secret, link active member/admin accounts through hashed single-use tokens, and recheck permissions on each update and before protected delivery.

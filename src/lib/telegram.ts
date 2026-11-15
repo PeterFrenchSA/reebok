@@ -4,6 +4,7 @@ import { z } from "zod";
 import { addDays, bookingHorizon, dateOnly, dateValue, getAvailability, propertyToday } from "@/lib/availability";
 import { hasPermission } from "@/lib/rbac";
 import { hashOpaqueToken } from "@/lib/tokens";
+import { MEMBER_MAX_STAY_NIGHTS } from "@/lib/stay-limits";
 
 const numericId = z.number().int().safe();
 const chatSchema = z.object({ id: numericId, type: z.enum(["private", "group", "supergroup", "channel"]) });
@@ -79,7 +80,7 @@ export function calendarButtons(month: string, earliest: string, latest: string)
 
 function calendar(chatId: number, state: State, month?: string) {
   const earliest = state.step === "END" && state.start ? addDays(state.start, 1) : propertyToday();
-  const latest = state.step === "END" && state.start ? [addDays(state.start, 90), bookingHorizon()].sort()[0] : addDays(bookingHorizon(), -1);
+  const latest = state.step === "END" && state.start ? [addDays(state.start, MEMBER_MAX_STAY_NIGHTS), bookingHorizon()].sort()[0] : addDays(bookingHorizon(), -1);
   const displayMonth = month ?? earliest.slice(0, 7);
   return reply(chatId, `${state.step === "END" ? `Check-in: ${state.start}. Choose check-out` : "Choose check-in"}\n${displayMonth} (South Africa dates)\nCalendar buttons select dates, not availability. We check the complete stay next.`, scopedButtons(calendarButtons(displayMonth, earliest, latest), state));
 }
@@ -150,7 +151,7 @@ export async function processTelegramUpdate(tx: Prisma.TransactionClient, update
       const dates = command[3].split(/\s+/);
       if (dates.length !== 2) return send(reply(chatId, "Use /availability YYYY-MM-DD YYYY-MM-DD, or /availability for guided room/date selection."));
       try { return send(reply(chatId, availabilityText(await getAvailability(dates[0], dates[1], [], tx)))); }
-      catch { return send(reply(chatId, "Choose real dates from today, checkout after check-in, at most 90 nights, within the booking horizon. Use /availability for buttons.")); }
+      catch { return send(reply(chatId, `Choose real dates from today, checkout after check-in, at most ${MEMBER_MAX_STAY_NIGHTS} nights for a member/family stay, within the booking horizon. Use /availability for buttons.`)); }
     }
     state = { nonce: randomBytes(4).toString("hex"), step: "ROOMS", roomIds: [] }; await save(state);
   }
@@ -186,7 +187,7 @@ export async function processTelegramUpdate(tx: Prisma.TransactionClient, update
         const result = await getAvailability(state.start, date, state.roomIds, tx);
         await tx.telegramConversation.deleteMany({ where: { telegramUserId: senderId } });
         return send(reply(chatId, availabilityText(result), [[{ text: "Check another stay", callback_data: "availability" }]]));
-      } catch { return send(reply(chatId, "Choose checkout after check-in, within 90 nights. If rooms changed, restart with /availability.")); }
+      } catch { return send(reply(chatId, `Choose checkout after check-in, within ${MEMBER_MAX_STAY_NIGHTS} nights for a member/family stay. If rooms changed, restart with /availability.`)); }
     }
   }
   if (action === "start" || action === "help") return send(home(chatId));

@@ -13,6 +13,7 @@ import { BotReply, TelegramUpdateInput } from "../src/lib/telegram";
 import { hashOpaqueToken } from "../src/lib/tokens";
 import { testMemberBookings } from "./member-booking.integration";
 import { testCalendarAndSheets } from "./calendar-sheets.integration";
+import { testStayLimits } from "./stay-limits.integration";
 
 const database = new URL(process.env.TEST_DATABASE_URL ?? "http://invalid");
 if (database.hostname !== "127.0.0.1" || database.pathname !== "/reebok_bot_test" || process.env.DATABASE_URL !== process.env.TEST_DATABASE_URL) throw new Error("Use the isolated integration test runner, never a real database.");
@@ -221,6 +222,7 @@ test("production HTTP and database integration (no external Telegram or SMTP req
     const create = (start: number, end: number, roomId?: string) => api("/api/bookings", cookies.FAMILY_MEMBER, { source: "INTERNAL", scope: roomId ? "ROOM_SPECIFIC" : "WHOLE_HOUSE", startDate: day(start), endDate: day(end), guestBreakdown: { member: 1 }, roomAllocations: roomId ? [{ roomId, guestCount: 1 }] : undefined });
     await testMemberBookings(t, base, cookies, member.id, roomA.id, roomB.id);
     await testCalendarAndSheets(t, base, cookies, member.id, roomA.id, roomB.id);
+    await testStayLimits(t, base, cookies, member.id, roomA.id);
 
     await t.test("role boundaries and safe production login", async () => {
       assert.equal((await api("/api/admin/telegram", cookies.SHAREHOLDER)).status, 403);
@@ -323,6 +325,8 @@ test("production HTTP and database integration (no external Telegram or SMTP req
       assert.match(texts(await bot(callback(501, `${state.nonce}|day:${day(51)}`))), /no longer active/);
       const result = await bot(callback(501, `${nextState.nonce}|day:${day(52)}`)); assert.match(texts(result), /Selected rooms: Available/);
       assert.match(texts(await bot(update(501, "/availability sometime next weekend"))), /Use \/availability/);
+      assert.match(texts(await bot(update(501, `/availability ${day(300)} ${day(310)}`))), /10 nights/);
+      assert.match(texts(await bot(update(501, `/availability ${day(300)} ${day(311)}`))), /at most 10 nights/);
     });
     await t.test("approved groups still require linked senders and return only a private-chat handoff", async () => {
       assert.deepEqual(await bot(update(501, "/availability", -100123)), []);

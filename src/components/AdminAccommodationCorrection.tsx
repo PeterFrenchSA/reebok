@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { CalendarAvailability, emptyMemberCounts, MemberCounts, memberCategories, RoomAllocation } from "@/lib/booking-options";
 import { MemberGuestCounts, RoomSelection } from "@/components/BookingRoomFields";
 import type { FeeBreakdown } from "@/lib/fees";
+import { MEMBER_MAX_STAY_NIGHTS } from "@/lib/stay-limits";
 
 export type CorrectableBooking = { id: string; source: string; scope: string; startDate: string; endDate: string; nights: number;
   totalGuests: number; currency: string; totalAmount: string | number | null; updatedAt?: string; guestBreakdown?: unknown;
@@ -61,6 +62,7 @@ function CorrectionForm({ booking, onSaved }: { booking: CorrectableBooking; onS
   }
   return <form className="grid correction-form" onSubmit={submit}><fieldset className="booking-fieldset grid" disabled={busy}>
     <legend>Admin correction</legend><p className="notice">For future family stays only. This recalculates the member estimate, resets approval and records your reason. No correction email is sent; notify the family directly. Public bookings can be converted only when owned by an active member.</p>
+    <p className="lead">Member/family stays are limited to {MEMBER_MAX_STAY_NIGHTS} nights. Shorten longer stays through Change dates before correcting member accommodation.</p>
     <div className="field"><label htmlFor={`correction-scope-${booking.id}`}>Accommodation</label><select id={`correction-scope-${booking.id}`} value={scope} onChange={(e) => { setScope(e.target.value as typeof scope); setAllocations([]); }}><option value="WHOLE_HOUSE">Whole house</option><option value="ROOM_SPECIFIC">Selected rooms (shared family stay)</option></select></div>
     <MemberGuestCounts prefix={`correction-${booking.id}`} value={counts} onChange={setCounts} />
     <p className="lead">Guest categories must total {booking.totalGuests}, the existing party size.</p>

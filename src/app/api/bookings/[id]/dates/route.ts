@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/rbac";
 import { rejectForeignWrite } from "@/lib/write-origin";
-import { assertReservation, BookingRuleError, dateOnly, dateValue, validateStay, withBookingLock } from "@/lib/availability";
+import { assertReservation, BookingRuleError, dateOnly, dateValue, propertyToday, validateStay, withBookingLock } from "@/lib/availability";
 import { guestBreakdownSchema, validGuestCategories } from "@/lib/booking-guests";
 import { quoteBooking } from "@/lib/booking-pricing";
 
@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (current.source !== "INTERNAL" && current.source !== "EXTERNAL_PUBLIC") throw new BookingRuleError("Imported channel bookings need separate review before rescheduling.", 409);
       const counts = guestBreakdownSchema.safeParse(current.guestBreakdown);
       if (!counts.success || !validGuestCategories(current.source, counts.data) || Object.values(counts.data).reduce((a, b) => a + b, 0) !== current.totalGuests) throw new BookingRuleError("Guest categories need correcting before dates can be changed.", 409);
-      const nights = validateStay(data.startDate, data.endDate);
+      const nights = validateStay(data.startDate, data.endDate, propertyToday(), current.source);
       const startDate = dateValue(data.startDate), endDate = dateValue(data.endDate);
       if (startDate.getTime() === current.startDate.getTime() && endDate.getTime() === current.endDate.getTime()) throw new BookingRuleError("Choose new dates before saving.");
       await assertReservation(tx, { ...current, startDate, endDate });

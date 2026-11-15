@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarAvailability, CalendarBooking, roomHolds, RoomOption } from "@/lib/booking-options";
+import { maxStayNights } from "@/lib/stay-limits";
 
 type AvailabilityBooking = CalendarBooking;
 
@@ -62,6 +63,7 @@ const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDateChange, memberMode = false,
   scope = "WHOLE_HOUSE", roomIds = [], refreshKey = 0, onAvailabilityLoaded }: Props) {
+  const maxNights = maxStayNights(memberMode ? "INTERNAL" : "EXTERNAL_PUBLIC");
   const [bookings, setBookings] = useState<AvailabilityBooking[]>([]);
   const [rooms, setRooms] = useState<RoomOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +173,7 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
   }
 
   function canSelectEnd(day: Date): boolean {
-    if (!horizon || toIsoDate(day) > horizon || !selectedStart || day <= selectedStart || day > addDays(selectedStart, 90)) {
+    if (!horizon || toIsoDate(day) > horizon || !selectedStart || day <= selectedStart || day > addDays(selectedStart, maxNights)) {
       return false;
     }
     return conflictInRange(selectedStart, day) === null;
@@ -202,6 +204,10 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
       return;
     }
 
+    if (day > addDays(selectedStart, maxNights)) {
+      setHint(`Choose check-out within ${maxNights} nights of check-in.`);
+      return;
+    }
     const conflict = conflictInRange(selectedStart, day);
     if (conflict) {
       setHint(
@@ -228,8 +234,9 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
           <p className="lead">
             {selectionMode === "start"
               ? "Choose check-in first."
-              : "Now choose check-out (minimum one night)."}
+              : `Now choose check-out (1-${maxNights} nights).`}
           </p>
+          <p className="lead">{memberMode ? "Member/family stays" : "Guest stays"}: maximum {maxNights} nights per booking.</p>
         </div>
         <div className="action-row">
           <button
@@ -346,6 +353,9 @@ export function BookingCalendar({ startDate, endDate, onStartDateChange, onEndDa
                       .join(" ");
 
                     const title = (() => {
+                      if (selectionMode === "end" && selectedStart && !selectedEnd && day > addDays(selectedStart, maxNights)) {
+                        return `Maximum ${maxNights} nights per booking`;
+                      }
                       if (selectableAsEnd && status !== "available") {
                         return "Available as check-out date";
                       }

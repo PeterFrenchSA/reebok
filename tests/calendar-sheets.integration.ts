@@ -109,7 +109,7 @@ export async function testCalendarAndSheets(t: TestContext, base: string, cookie
     await prisma.googleSheetsSync.update({ where: { id: SHEETS_SYNC_ID }, data: { enabled: true, spreadsheetId: target } });
     let writes = 0;
     const transport = { read: async () => [{ properties: { title: "My separate notes", sheetId: 9 } }], write: async (id: string, batch: unknown) => {
-      assert.equal(id, target); assert.equal(JSON.stringify(batch).includes('"sheetId":9'), false); writes++;
+      assert.equal(id, target); assert.doesNotMatch(JSON.stringify(batch), /"sheetId":9[,}]/); writes++;
     } };
     const before = await prisma.booking.findUniqueOrThrow({ where: { id: family.id } });
     const result = await syncGoogleSheets({ manual: true, transport });

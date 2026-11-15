@@ -33,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
       const total = Object.values(data.guestBreakdown).reduce((sum, n) => sum + n, 0);
       if (total !== current.totalGuests) throw new BookingRuleError("Guest categories must account for the booking's existing guest total.");
-      await assertReservation(tx, { ...current, scope: data.scope, roomAllocations: data.roomAllocations });
+      await assertReservation(tx, { ...current, source: "INTERNAL", scope: data.scope, roomAllocations: data.roomAllocations });
       const quote = await quoteBooking({ source: "INTERNAL", startDate: current.startDate, nights: current.nights, counts: data.guestBreakdown }, tx);
       if (quote.feeConfigId !== data.quotedFeeConfigId || Math.round(quote.breakdown.total * 100) !== Math.round(data.quotedTotal * 100)) throw new BookingRuleError("Pricing changed. Refresh the estimate and retry.", 409);
       const rooms = await tx.room.findMany({ where: { id: { in: [...current.roomAllocations, ...data.roomAllocations].map((a) => a.roomId) } }, select: { id: true, name: true } });
