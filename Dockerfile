@@ -1,4 +1,4 @@
-FROM node:22.23.4-bookworm-slim AS base
+FROM node:22.23.5-bookworm-slim AS base
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends openssl ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
