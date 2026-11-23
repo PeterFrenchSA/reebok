@@ -39,7 +39,7 @@ test("one batch owns newly created tabs and refuses existing unowned tabs", () =
   assert.equal(requests[1].createDeveloperMetadata.developerMetadata.metadataKey, SHEETS_MARKER);
   assert.equal(requests[2].updateCells.range.sheetId, id);
   assert.equal(requests[2].updateCells.rows[1].values[0].userEnteredValue.stringValue, tab.rows[0][0]);
-  assert.equal(JSON.stringify(batch).includes('"sheetId":12'), false);
+  assert.equal(/"sheetId":12(?=[,}])/.test(JSON.stringify(batch)), false);
   assert.throws(() => buildSheetsBatch([tab], [{ properties: { title: tab.title, sheetId: 12 } }]), /not owned/);
 });
 test("owned tabs retain identity, clear stale cells atomically and reject duplicate ownership", () => {

@@ -9,7 +9,7 @@ const syncSchema = z.object({
   provider: z.nativeEnum(IntegrationProvider),
   action: z.enum(["connect", "sync"]),
   accountLabel: z.string().max(120).optional(),
-  settings: z.record(z.unknown()).optional()
+  settings: z.record(z.string(), z.unknown()).optional()
 });
 
 export async function GET(req: NextRequest) {
